@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fetchSystemInfo } from "@/lib/api";
-import { formatUptime, formatRelativeTime } from "@/lib/format";
+import { formatUptime, formatRelativeTime, formatOS, formatPlatform } from "@/lib/format";
 import { SystemInfo as SystemInfoType } from "@/types/api";
 import { Monitor, Server, Clock, Activity } from "lucide-react";
 
@@ -98,13 +98,13 @@ export default function SystemInfo() {
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   操作系统
                 </span>
-                <span className="font-medium">{systemInfo.os}</span>
+                <span className="font-medium">{formatOS(systemInfo.os, systemInfo.platform)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   平台
                 </span>
-                <Badge variant="outline">{systemInfo.platform}</Badge>
+                <Badge variant="outline">{formatPlatform(systemInfo.platform)}</Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600 dark:text-gray-400">

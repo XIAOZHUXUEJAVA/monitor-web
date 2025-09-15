@@ -109,3 +109,87 @@ export const getProgressColor = (
     return "bg-green-500";
   }
 };
+
+// 格式化操作系统显示
+export const formatOS = (os: string, platform: string): string => {
+  // 处理常见的操作系统格式
+  const osLower = os.toLowerCase();
+  const platformLower = platform.toLowerCase();
+  
+  // Ubuntu 系统
+  if (osLower.includes('ubuntu')) {
+    const versionMatch = os.match(/(\d+\.\d+)/);
+    if (versionMatch) {
+      return `Ubuntu ${versionMatch[1]}`;
+    }
+    return 'Ubuntu';
+  }
+  
+  // CentOS 系统
+  if (osLower.includes('centos')) {
+    const versionMatch = os.match(/(\d+)/);
+    if (versionMatch) {
+      return `CentOS ${versionMatch[1]}`;
+    }
+    return 'CentOS';
+  }
+  
+  // Red Hat 系统
+  if (osLower.includes('red hat') || osLower.includes('rhel')) {
+    const versionMatch = os.match(/(\d+\.\d+)/);
+    if (versionMatch) {
+      return `RHEL ${versionMatch[1]}`;
+    }
+    return 'Red Hat Enterprise Linux';
+  }
+  
+  // Debian 系统
+  if (osLower.includes('debian')) {
+    const versionMatch = os.match(/(\d+)/);
+    if (versionMatch) {
+      return `Debian ${versionMatch[1]}`;
+    }
+    return 'Debian';
+  }
+  
+  // Windows 系统
+  if (osLower.includes('windows')) {
+    if (osLower.includes('10')) return 'Windows 10';
+    if (osLower.includes('11')) return 'Windows 11';
+    if (osLower.includes('server')) return 'Windows Server';
+    return 'Windows';
+  }
+  
+  // macOS 系统
+  if (osLower.includes('darwin') || osLower.includes('macos')) {
+    return 'macOS';
+  }
+  
+  // 其他 Linux 发行版
+  if (platformLower.includes('linux')) {
+    // 尝试提取发行版名称
+    const distroMatch = os.match(/^([A-Za-z\s]+)/);
+    if (distroMatch) {
+      return distroMatch[1].trim();
+    }
+    return 'Linux';
+  }
+  
+  // 默认返回原始值，首字母大写
+  return os.charAt(0).toUpperCase() + os.slice(1);
+};
+
+// 格式化平台显示
+export const formatPlatform = (platform: string): string => {
+  const platformLower = platform.toLowerCase();
+  
+  if (platformLower === 'linux') return 'Linux';
+  if (platformLower === 'windows') return 'Windows';
+  if (platformLower === 'darwin') return 'macOS';
+  if (platformLower === 'freebsd') return 'FreeBSD';
+  if (platformLower === 'openbsd') return 'OpenBSD';
+  if (platformLower === 'netbsd') return 'NetBSD';
+  
+  // 默认返回首字母大写
+  return platform.charAt(0).toUpperCase() + platform.slice(1);
+};
