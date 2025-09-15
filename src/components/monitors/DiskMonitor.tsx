@@ -136,7 +136,7 @@ export default function DiskMonitor() {
 
               return (
                 <div
-                  key={disk.device}
+                  key={`${disk.device}-${disk.mount_point}`}
                   className="p-4 border rounded-lg space-y-3"
                 >
                   <div className="flex items-center justify-between">
