@@ -72,11 +72,15 @@ export default function SystemInfo() {
   }
 
   return (
-    <Card className="w-full">
+    <Card className="monitor-card w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Monitor className="h-5 w-5" />
-          系统信息
+        <CardTitle className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-lg">
+            <Monitor className="h-5 w-5 text-white" />
+          </div>
+          <span className="bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+            系统信息
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -188,14 +192,16 @@ export default function SystemInfo() {
         </div>
 
         {/* 系统状态指示器 */}
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="font-medium">系统运行正常</span>
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              最后更新: {new Date().toLocaleTimeString("zh-CN")}
+        <div className="gradient-border">
+          <div className="gradient-border-content">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="status-indicator status-good w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="font-semibold text-green-700 dark:text-green-300">系统运行正常</span>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                最后更新: {new Date().toLocaleTimeString("zh-CN")}
+              </div>
             </div>
           </div>
         </div>

@@ -47,16 +47,20 @@ export default function DiskMonitor() {
 
   if (loading) {
     return (
-      <Card className="w-full">
+      <Card className="monitor-card w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HardDrive className="h-5 w-5" />
-            磁盘监控
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg">
+              <HardDrive className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              磁盘监控
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
           </div>
         </CardContent>
       </Card>
@@ -65,15 +69,19 @@ export default function DiskMonitor() {
 
   if (error || !diskData) {
     return (
-      <Card className="w-full">
+      <Card className="monitor-card w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <HardDrive className="h-5 w-5" />
-            磁盘监控
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg shadow-lg">
+              <HardDrive className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+              磁盘监控
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-red-500 py-8">
+          <div className="text-center text-red-500 py-8 font-medium">
             {error || "无法加载磁盘数据"}
           </div>
         </CardContent>
@@ -96,12 +104,21 @@ export default function DiskMonitor() {
     usage_percent: Math.round(disk.usage_percent * 10) / 10,
   }));
 
+  const overallUsageStatus = totalUsagePercent >= 95 ? 'danger' : totalUsagePercent >= 80 ? 'warning' : 'good';
+
   return (
-    <Card className="w-full">
+    <Card className="monitor-card w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <HardDrive className="h-5 w-5" />
-          磁盘监控
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg">
+              <HardDrive className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              磁盘监控
+            </span>
+          </div>
+          <div className={`status-indicator status-${overallUsageStatus} w-3 h-3 rounded-full bg-${overallUsageStatus === 'good' ? 'green' : overallUsageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

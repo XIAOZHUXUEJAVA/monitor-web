@@ -48,16 +48,20 @@ export default function NetworkMonitor() {
 
   if (loading) {
     return (
-      <Card className="w-full">
+      <Card className="monitor-card w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            网络监控
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+              网络监控
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div>
           </div>
         </CardContent>
       </Card>
@@ -66,15 +70,19 @@ export default function NetworkMonitor() {
 
   if (error || !networkData) {
     return (
-      <Card className="w-full">
+      <Card className="monitor-card w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            网络监控
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg shadow-lg">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+              网络监控
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-red-500 py-8">
+          <div className="text-center text-red-500 py-8 font-medium">
             {error || "无法加载网络数据"}
           </div>
         </CardContent>
@@ -101,12 +109,22 @@ export default function NetworkMonitor() {
     is_up: iface.is_up,
   }));
 
+  const activeInterfaces = networkData.interfaces.filter(iface => iface.is_up).length;
+  const networkStatus = activeInterfaces > 0 ? 'good' : 'danger';
+
   return (
-    <Card className="w-full">
+    <Card className="monitor-card w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          网络监控
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+              网络监控
+            </span>
+          </div>
+          <div className={`status-indicator status-${networkStatus} w-3 h-3 rounded-full bg-${networkStatus === 'good' ? 'green' : networkStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

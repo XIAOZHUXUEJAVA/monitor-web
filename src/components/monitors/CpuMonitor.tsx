@@ -39,11 +39,15 @@ export default function CpuMonitor() {
 
   if (loading) {
     return (
-      <Card className="w-full">
+      <Card className="monitor-card w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
-            CPU 监控
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg">
+              <Cpu className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              CPU 监控
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -57,15 +61,19 @@ export default function CpuMonitor() {
 
   if (error || !cpuData) {
     return (
-      <Card className="w-full">
+      <Card className="monitor-card w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
-            CPU 监控
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg shadow-lg">
+              <Cpu className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+              CPU 监控
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-red-500 py-8">
+          <div className="text-center text-red-500 py-8 font-medium">
             {error || "无法加载 CPU 数据"}
           </div>
         </CardContent>
@@ -88,12 +96,21 @@ export default function CpuMonitor() {
     usage: Math.round(item.usage * 10) / 10,
   }));
 
+  const usageStatus = cpuData.usage >= 80 ? 'danger' : cpuData.usage >= 60 ? 'warning' : 'good';
+
   return (
-    <Card className="w-full">
+    <Card className="monitor-card w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Cpu className="h-5 w-5" />
-          CPU 监控
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg">
+              <Cpu className="h-5 w-5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              CPU 监控
+            </span>
+          </div>
+          <div className={`status-indicator status-${usageStatus} w-3 h-3 rounded-full bg-${usageStatus === 'good' ? 'green' : usageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
