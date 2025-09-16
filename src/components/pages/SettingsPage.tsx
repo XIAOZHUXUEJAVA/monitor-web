@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAppStore } from "@/store/app-store";
 import { 
   Settings, 
   Monitor, 
@@ -13,10 +15,60 @@ import {
   Wifi,
   User,
   Save,
-  RefreshCw
+  RefreshCw,
+  CheckCircle
 } from "lucide-react";
 
 export function SettingsPage() {
+  // 使用Zustand store管理设置
+  const { settings, updateSettings, loadSettings } = useAppStore();
+  
+  // 本地状态管理修改
+  const [localSettings, setLocalSettings] = useState(settings);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // 同步store中的设置到本地状态
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
+  
+  // 初始化加载设置
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+  
+  // 保存设置
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    try {
+      // 更新store中的设置
+      updateSettings(localSettings);
+      
+      // 显示成功提示
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // 重置为默认设置
+  const handleReset = () => {
+    const defaultSettings = {
+      refreshInterval: 5,
+      historyPoints: 20,
+      autoRefresh: true,
+    };
+    setLocalSettings(defaultSettings);
+  };
+  
+  // 检查是否有未保存的修改
+  const hasUnsavedChanges = JSON.stringify(localSettings) !== JSON.stringify(settings);
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
@@ -26,13 +78,24 @@ export function SettingsPage() {
           <p className="text-gray-600 dark:text-gray-400">配置监控系统参数和个性化设置</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          {saveSuccess && (
+            <div className="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-md">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm">设置已保存</span>
+            </div>
+          )}
+          <Button variant="outline" size="sm" onClick={handleReset}>
             <RefreshCw className="h-4 w-4 mr-2" />
             重置默认
           </Button>
-          <Button size="sm">
+          <Button 
+            size="sm" 
+            onClick={handleSave}
+            disabled={isSaving || !hasUnsavedChanges}
+            className={hasUnsavedChanges ? 'bg-blue-600 hover:bg-blue-700' : ''}
+          >
             <Save className="h-4 w-4 mr-2" />
-            保存设置
+            {isSaving ? '保存中...' : '保存设置'}
           </Button>
         </div>
       </div>
@@ -53,11 +116,20 @@ export function SettingsPage() {
                 <h4 className="font-medium">数据刷新间隔</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">设置自动刷新数据的时间间隔</p>
               </div>
-              <select className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600">
-                <option value="5">5秒</option>
-                <option value="10">10秒</option>
-                <option value="30">30秒</option>
-                <option value="60">1分钟</option>
+              <select 
+                value={localSettings.refreshInterval}
+                onChange={(e) => setLocalSettings({
+                  ...localSettings,
+                  refreshInterval: parseInt(e.target.value)
+                })}
+                className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600 min-w-[100px]"
+              >
+                <option value={1}>1秒</option>
+                <option value={3}>3秒</option>
+                <option value={5}>5秒</option>
+                <option value={10}>10秒</option>
+                <option value={30}>30秒</option>
+                <option value={60}>1分钟</option>
               </select>
             </div>
 
@@ -66,11 +138,18 @@ export function SettingsPage() {
                 <h4 className="font-medium">历史数据点数</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">图表显示的历史数据点数量</p>
               </div>
-              <select className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600">
-                <option value="10">10个</option>
-                <option value="20">20个</option>
-                <option value="50">50个</option>
-                <option value="100">100个</option>
+              <select 
+                value={localSettings.historyPoints}
+                onChange={(e) => setLocalSettings({
+                  ...localSettings,
+                  historyPoints: parseInt(e.target.value)
+                })}
+                className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600 min-w-[100px]"
+              >
+                <option value={10}>10个</option>
+                <option value={20}>20个</option>
+                <option value={50}>50个</option>
+                <option value={100}>100个</option>
               </select>
             </div>
 
@@ -79,7 +158,19 @@ export function SettingsPage() {
                 <h4 className="font-medium">启用自动刷新</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">自动定时刷新监控数据</p>
               </div>
-              <Badge variant="outline">启用</Badge>
+              <button
+                onClick={() => setLocalSettings({
+                  ...localSettings,
+                  autoRefresh: !localSettings.autoRefresh
+                })}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  localSettings.autoRefresh
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {localSettings.autoRefresh ? '已启用' : '已禁用'}
+              </button>
             </div>
           </CardContent>
         </Card>

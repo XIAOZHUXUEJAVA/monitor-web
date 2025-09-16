@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -34,12 +34,8 @@ export default function MemoryMonitor() {
   const memoryData = useMonitoringStore(state => state.memoryData);
   const loading = useMonitoringStore(state => state.loading.memory);
   const error = useMonitoringStore(state => state.errors.memory);
-  const fetchMemory = useMonitoringStore(state => state.fetchMemory);
-
-  // 初始化加载数据
-  useEffect(() => {
-    fetchMemory();
-  }, [fetchMemory]);
+  
+  // 移除了个别的fetch调用，现在使用统一的数据获取机制
 
   if (loading) {
     return (

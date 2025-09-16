@@ -19,6 +19,7 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
     isDarkMode,
     activeSection,
     isRefreshing,
+    settings,
     setSidebarCollapsed,
     setActiveSection,
     toggleDarkMode,
@@ -93,7 +94,10 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
               <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-200 dark:border-green-700">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                 <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                  实时监控中
+                  {settings.autoRefresh 
+                    ? `实时监控中 (每${settings.refreshInterval}秒刷新)`
+                    : '手动刷新模式'
+                  }
                 </span>
               </div>
             </div>

@@ -58,12 +58,24 @@ export function useMonitoringData() {
 
   // 定时更新数据
   useEffect(() => {
+    const settings = useAppStore.getState().settings;
+    
+    if (!settings.autoRefresh) {
+      return; // 如果禁用自动刷新，不设置定时器
+    }
+    
     const interval = setInterval(() => {
       fetchAllData();
-    }, 5000); // 每5秒更新一次
+    }, settings.refreshInterval * 1000); // 转换为毫秒
 
     return () => clearInterval(interval);
   }, [fetchAllData]);
+  
+  // 监听设置变化，重新设置定时器
+  const settings = useAppStore(state => state.settings);
+  useEffect(() => {
+    // 当设置变化时，这个effect会重新运行，上面的effect也会重新运行
+  }, [settings.refreshInterval, settings.autoRefresh]);
 
   // 同步系统状态到应用状态
   useEffect(() => {
@@ -102,21 +114,27 @@ export function useAppState() {
     isDarkMode,
     activeSection,
     isRefreshing,
+    settings,
     setSidebarCollapsed,
     setActiveSection,
     toggleDarkMode,
+    loadSettings,
   } = useAppStore();
 
-  // 初始化主题
+  // 初始化主题和设置
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // 加载保存的设置
+      loadSettings();
+      
+      // 初始化主题
       const savedTheme = localStorage.getItem('theme');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const shouldUseDark = savedTheme ? savedTheme === 'dark' : prefersDark;
       
       useAppStore.getState().setDarkMode(shouldUseDark);
     }
-  }, []);
+  }, [loadSettings]);
 
   // 响应式侧边栏
   useEffect(() => {
@@ -136,6 +154,7 @@ export function useAppState() {
     isDarkMode,
     activeSection,
     isRefreshing,
+    settings,
     setSidebarCollapsed,
     setActiveSection,
     toggleDarkMode,

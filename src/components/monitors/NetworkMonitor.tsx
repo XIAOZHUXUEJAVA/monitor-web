@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedNumber } from "@/components/ui/animated-number";
@@ -25,12 +25,8 @@ export default function NetworkMonitor() {
   const networkData = useMonitoringStore(state => state.networkData);
   const loading = useMonitoringStore(state => state.loading.network);
   const error = useMonitoringStore(state => state.errors.network);
-  const fetchNetwork = useMonitoringStore(state => state.fetchNetwork);
-
-  // 初始化加载数据
-  useEffect(() => {
-    fetchNetwork();
-  }, [fetchNetwork]);
+  
+  // 移除了个别的fetch调用，现在使用统一的数据获取机制
 
   if (loading) {
     return (

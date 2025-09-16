@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -17,12 +17,8 @@ export default function CpuMonitor() {
   const cpuData = useMonitoringStore(state => state.cpuData);
   const loading = useMonitoringStore(state => state.loading.cpu);
   const error = useMonitoringStore(state => state.errors.cpu);
-  const fetchCpu = useMonitoringStore(state => state.fetchCpu);
-
-  // 初始化加载数据
-  useEffect(() => {
-    fetchCpu();
-  }, [fetchCpu]);
+  
+  // 移除了个别的fetch调用，现在使用统一的数据获取机制
 
   if (loading) {
     return (

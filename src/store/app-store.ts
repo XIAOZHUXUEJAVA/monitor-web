@@ -22,6 +22,13 @@ interface AppState {
   systemStatus: SystemStatus;
   lastUpdated: string;
   
+  // 设置配置
+  settings: {
+    refreshInterval: number; // 数据刷新间隔（秒）
+    historyPoints: number;   // 历史数据点数
+    autoRefresh: boolean;    // 是否启用自动刷新
+  };
+  
   // Actions
   setSidebarCollapsed: (collapsed: boolean) => void;
   setDarkMode: (isDark: boolean) => void;
@@ -29,6 +36,8 @@ interface AppState {
   triggerRefresh: () => void;
   updateSystemStatus: (status: SystemStatus) => void;
   toggleDarkMode: () => void;
+  updateSettings: (settings: Partial<AppState['settings']>) => void;
+  loadSettings: () => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -48,6 +57,13 @@ export const useAppStore = create<AppState>()(
         network: true,
       },
       lastUpdated: new Date().toISOString(),
+      
+      // 默认设置
+      settings: {
+        refreshInterval: 5,     // 默认5秒刷新
+        historyPoints: 20,      // 默认20个历史数据点
+        autoRefresh: true,      // 默认启用自动刷新
+      },
       
       // Actions
       setSidebarCollapsed: (collapsed) => 
@@ -94,6 +110,32 @@ export const useAppStore = create<AppState>()(
       toggleDarkMode: () => {
         const currentMode = get().isDarkMode;
         get().setDarkMode(!currentMode);
+      },
+      
+      updateSettings: (newSettings) => {
+        const currentSettings = get().settings;
+        const updatedSettings = { ...currentSettings, ...newSettings };
+        
+        // 保存到localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('monitoring-settings', JSON.stringify(updatedSettings));
+        }
+        
+        set({ settings: updatedSettings }, false, 'updateSettings');
+      },
+      
+      loadSettings: () => {
+        if (typeof window !== 'undefined') {
+          const savedSettings = localStorage.getItem('monitoring-settings');
+          if (savedSettings) {
+            try {
+              const settings = JSON.parse(savedSettings);
+              set({ settings }, false, 'loadSettings');
+            } catch (error) {
+              console.error('Failed to load settings:', error);
+            }
+          }
+        }
       },
     }),
     {
