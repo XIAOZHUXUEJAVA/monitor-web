@@ -20,6 +20,7 @@ import {
   Sun,
   Home,
   TrendingUp,
+  Server,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -44,6 +45,13 @@ const navigation = [
     name: "概览",
     icon: Home,
     badge: null,
+  },
+  {
+    id: "hosts",
+    name: "主机管理",
+    icon: Server,
+    badge: null,
+    href: "/hosts",
   },
   {
     id: "cpu",
@@ -239,7 +247,13 @@ export function Sidebar({
                   !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800",
                   !isExpanded && "justify-center px-0"
                 )}
-                onClick={() => onSectionChange?.(item.id)}
+                onClick={() => {
+                  if (item.href) {
+                    window.location.href = item.href;
+                  } else {
+                    onSectionChange?.(item.id);
+                  }
+                }}
               >
                 <item.icon className={cn("h-5 w-5", !isExpanded && "h-6 w-6")} />
                 {isExpanded && (
