@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { getAlertRules, AlertRule, formatDuration } from "@/lib/alert-api";
 import { 
   Bell, 
   AlertTriangle, 
@@ -15,6 +17,26 @@ import {
 } from "lucide-react";
 
 export function AlertsPage() {
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [loadingRules, setLoadingRules] = useState(true);
+
+  // 加载告警规则
+  useEffect(() => {
+    const loadAlertRules = async () => {
+      try {
+        setLoadingRules(true);
+        const rules = await getAlertRules();
+        setAlertRules(rules);
+      } catch (error) {
+        console.error('Failed to load alert rules:', error);
+      } finally {
+        setLoadingRules(false);
+      }
+    };
+
+    loadAlertRules();
+  }, []);
+
   const alerts = [
     {
       id: 1,
@@ -238,37 +260,45 @@ export function AlertsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">CPU使用率告警</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  当CPU使用率超过80%持续5分钟时触发
-                </p>
-              </div>
-              <Badge variant="outline">启用</Badge>
+          {loadingRules ? (
+            <div className="text-center py-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400">加载告警规则中...</span>
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">内存使用率告警</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  当内存使用率超过85%时触发
-                </p>
-              </div>
-              <Badge variant="outline">启用</Badge>
+          ) : (
+            <div className="space-y-4">
+              {alertRules.map((rule) => (
+                <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <h4 className="font-medium">{rule.name}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {rule.metric_type.toUpperCase()}使用率{rule.operator}{rule.threshold}%持续{formatDuration(rule.duration)}时触发
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      {rule.host_id ? `主机特定规则 (ID: ${rule.host_id})` : '全局规则'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={rule.severity === 'critical' ? 'destructive' : 
+                              rule.severity === 'warning' ? 'default' : 'secondary'}
+                    >
+                      {rule.severity === 'critical' ? '严重' : 
+                       rule.severity === 'warning' ? '警告' : '信息'}
+                    </Badge>
+                    <Badge variant={rule.enabled ? "outline" : "secondary"}>
+                      {rule.enabled ? '启用' : '禁用'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              
+              {alertRules.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 dark:text-gray-400">暂无告警规则</p>
+                </div>
+              )}
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">磁盘空间告警</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  当磁盘剩余空间低于10%时触发
-                </p>
-              </div>
-              <Badge variant="outline">启用</Badge>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

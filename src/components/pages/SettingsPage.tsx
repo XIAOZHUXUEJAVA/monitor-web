@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/app-store";
+import { getAlertRules, updateAlertRuleThreshold, createHostAlertRule, AlertRule, getAlertRuleByTypeAndSeverity, formatDuration } from "@/lib/alert-api";
+import { getHosts } from "@/lib/host-api";
+import { Host } from "@/types/host";
 import { 
   Settings, 
   Monitor, 
@@ -28,15 +31,61 @@ export function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
+  // 告警规则状态
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [loadingRules, setLoadingRules] = useState(true);
+  const [updatingThresholds, setUpdatingThresholds] = useState<Record<string, boolean>>({});
+  
+  // 主机相关状态
+  const [hosts, setHosts] = useState<Host[]>([]);
+  const [selectedHostId, setSelectedHostId] = useState<number | null>(null);
+  const [loadingHosts, setLoadingHosts] = useState(true);
+  
   // 同步store中的设置到本地状态
   useEffect(() => {
     setLocalSettings(settings);
   }, [settings]);
   
-  // 初始化加载设置
+  // 加载主机列表
+  const loadHosts = async () => {
+    try {
+      setLoadingHosts(true);
+      const hostList = await getHosts();
+      // 确保返回的是数组
+      setHosts(Array.isArray(hostList) ? hostList : []);
+    } catch (error) {
+      console.error('Failed to load hosts:', error);
+      // 设置空数组作为默认值
+      setHosts([]);
+    } finally {
+      setLoadingHosts(false);
+    }
+  };
+
+  // 加载告警规则
+  const loadAlertRules = async () => {
+    try {
+      setLoadingRules(true);
+      // 根据选中的主机加载规则
+      const rules = await getAlertRules(selectedHostId || undefined);
+      setAlertRules(rules);
+    } catch (error) {
+      console.error('Failed to load alert rules:', error);
+    } finally {
+      setLoadingRules(false);
+    }
+  };
+  
+  // 初始化加载设置、主机和告警规则
   useEffect(() => {
     loadSettings();
+    loadHosts();
   }, [loadSettings]);
+  
+  // 当主机选择变化时重新加载告警规则
+  useEffect(() => {
+    loadAlertRules();
+  }, [selectedHostId]);
   
   // 保存设置
   const handleSave = async () => {
@@ -65,6 +114,69 @@ export function SettingsPage() {
       autoRefresh: true,
     };
     setLocalSettings(defaultSettings);
+  };
+  
+  // 获取特定主机和指标类型的有效阈值（优先使用主机特定规则，否则使用全局规则）
+  const getEffectiveThreshold = (metricType: string, severity: string): number | undefined => {
+    if (selectedHostId) {
+      // 先查找主机特定规则
+      const hostSpecificRule = alertRules.find(rule => 
+        rule.host_id === selectedHostId && 
+        rule.metric_type === metricType && 
+        rule.severity === severity
+      );
+      if (hostSpecificRule) {
+        return hostSpecificRule.threshold;
+      }
+    }
+    
+    // 查找全局规则
+    const globalRule = alertRules.find(rule => 
+      !rule.host_id && 
+      rule.metric_type === metricType && 
+      rule.severity === severity
+    );
+    return globalRule?.threshold;
+  };
+
+  // 检查是否存在主机特定规则
+  const hasHostSpecificRule = (metricType: string, severity: string): boolean => {
+    if (!selectedHostId) return false;
+    return alertRules.some(rule => 
+      rule.host_id === selectedHostId && 
+      rule.metric_type === metricType && 
+      rule.severity === severity
+    );
+  };
+  // 更新告警阈值
+  const updateThreshold = async (metricType: string, severity: string, threshold: number) => {
+    const key = `${metricType}-${severity}`;
+    try {
+      setUpdatingThresholds(prev => ({ ...prev, [key]: true }));
+      
+      if (selectedHostId) {
+        // 为特定主机创建或更新规则
+        const isExisting = hasHostSpecificRule(metricType, severity);
+        console.log(`${isExisting ? '更新' : '创建'}主机 ${selectedHostId} 的 ${metricType}-${severity} 规则，阈值: ${threshold}`);
+        await createHostAlertRule(selectedHostId, metricType, severity, threshold);
+      } else {
+        // 修改全局规则
+        console.log(`修改全局 ${metricType}-${severity} 规则，阈值: ${threshold}`);
+        await updateAlertRuleThreshold(metricType, severity, threshold);
+      }
+      
+      // 重新加载告警规则
+      await loadAlertRules();
+      
+      // 显示成功提示
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      
+    } catch (error) {
+      console.error('Failed to update threshold:', error);
+    } finally {
+      setUpdatingThresholds(prev => ({ ...prev, [key]: false }));
+    }
   };
   
   // 检查是否有未保存的修改
@@ -186,50 +298,245 @@ export function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* 主机选择器 */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div>
-                <h4 className="font-medium">CPU使用率阈值</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">触发CPU告警的使用率阈值</p>
+                <h4 className="font-medium">选择主机</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedHostId 
+                    ? `为主机 ${hosts.find(h => h.id === selectedHostId)?.display_name || selectedHostId} 创建特定告警规则` 
+                    : '修改全局告警规则（适用于所有主机）'
+                  }
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="number" 
-                  defaultValue="80" 
-                  className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
-                />
-                <span className="text-sm">%</span>
+              <div className="min-w-[200px]">
+                {loadingHosts ? (
+                  <span className="text-sm text-gray-500">加载中...</span>
+                ) : (
+                  <select 
+                    value={selectedHostId || ''}
+                    onChange={(e) => setSelectedHostId(e.target.value ? parseInt(e.target.value) : null)}
+                    className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    <option value="">全局规则</option>
+                    {Array.isArray(hosts) && hosts.map((host) => (
+                      <option key={host.id} value={host.id}>
+                        {host.display_name} ({host.hostname})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
+            
+            {loadingRules ? (
+              <div className="text-center py-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">加载告警规则中...</span>
+              </div>
+            ) : (
+              <>
+                {/* CPU告警阈值 */}
+                {(() => {
+                  const cpuWarningRule = getAlertRuleByTypeAndSeverity(alertRules, 'cpu', 'warning');
+                  const cpuCriticalRule = getAlertRuleByTypeAndSeverity(alertRules, 'cpu', 'critical');
+                  
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">CPU使用率告警阈值</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedHostId 
+                              ? `为主机 ${hosts.find(h => h.id === selectedHostId)?.display_name || selectedHostId} 设置CPU告警阈值` 
+                              : '全局CPU告警阈值设置'
+                            }
+                            {cpuWarningRule && ` (持续${formatDuration(cpuWarningRule.duration)}触发警告)`}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {cpuWarningRule && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">警告:</span>
+                              <input 
+                                type="number" 
+                                value={getEffectiveThreshold('cpu', 'warning') || ''}
+                                onChange={(e) => {
+                                  const newThreshold = parseFloat(e.target.value);
+                                  if (!isNaN(newThreshold)) {
+                                    updateThreshold('cpu', 'warning', newThreshold);
+                                  }
+                                }}
+                                disabled={updatingThresholds['cpu-warning']}
+                                className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
+                              />
+                              <span className="text-sm">%</span>
+                              {selectedHostId && hasHostSpecificRule('cpu', 'warning') && (
+                                <span className="text-xs text-blue-500">特定</span>
+                              )}
+                            </div>
+                          )}
+                          {cpuCriticalRule && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-red-500">严重:</span>
+                              <input 
+                                type="number" 
+                                value={getEffectiveThreshold('cpu', 'critical') || ''}
+                                onChange={(e) => {
+                                  const newThreshold = parseFloat(e.target.value);
+                                  if (!isNaN(newThreshold)) {
+                                    updateThreshold('cpu', 'critical', newThreshold);
+                                  }
+                                }}
+                                disabled={updatingThresholds['cpu-critical']}
+                                className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
+                              />
+                              <span className="text-sm">%</span>
+                              {selectedHostId && hasHostSpecificRule('cpu', 'critical') && (
+                                <span className="text-xs text-blue-500">特定</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">内存使用率阈值</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">触发内存告警的使用率阈值</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="number" 
-                  defaultValue="85" 
-                  className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
-                />
-                <span className="text-sm">%</span>
-              </div>
-            </div>
+                {/* 内存告警阈值 */}
+                {(() => {
+                  const memoryWarningRule = getAlertRuleByTypeAndSeverity(alertRules, 'memory', 'warning');
+                  const memoryCriticalRule = getAlertRuleByTypeAndSeverity(alertRules, 'memory', 'critical');
+                  
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">内存使用率告警阈值</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedHostId 
+                              ? `为主机 ${hosts.find(h => h.id === selectedHostId)?.display_name || selectedHostId} 设置内存告警阈值` 
+                              : '全局内存告警阈值设置'
+                            }
+                            {memoryWarningRule && ` (持续${formatDuration(memoryWarningRule.duration)}触发警告)`}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {memoryWarningRule && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">警告:</span>
+                              <input 
+                                type="number" 
+                                value={getEffectiveThreshold('memory', 'warning') || ''}
+                                onChange={(e) => {
+                                  const newThreshold = parseFloat(e.target.value);
+                                  if (!isNaN(newThreshold)) {
+                                    updateThreshold('memory', 'warning', newThreshold);
+                                  }
+                                }}
+                                disabled={updatingThresholds['memory-warning']}
+                                className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
+                              />
+                              <span className="text-sm">%</span>
+                              {selectedHostId && hasHostSpecificRule('memory', 'warning') && (
+                                <span className="text-xs text-blue-500">特定</span>
+                              )}
+                            </div>
+                          )}
+                          {memoryCriticalRule && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-red-500">严重:</span>
+                              <input 
+                                type="number" 
+                                value={getEffectiveThreshold('memory', 'critical') || ''}
+                                onChange={(e) => {
+                                  const newThreshold = parseFloat(e.target.value);
+                                  if (!isNaN(newThreshold)) {
+                                    updateThreshold('memory', 'critical', newThreshold);
+                                  }
+                                }}
+                                disabled={updatingThresholds['memory-critical']}
+                                className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
+                              />
+                              <span className="text-sm">%</span>
+                              {selectedHostId && hasHostSpecificRule('memory', 'critical') && (
+                                <span className="text-xs text-blue-500">特定</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">磁盘空间阈值</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">触发磁盘空间告警的剩余空间阈值</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="number" 
-                  defaultValue="10" 
-                  className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
-                />
-                <span className="text-sm">%</span>
-              </div>
-            </div>
+                {/* 磁盘告警阈值 */}
+                {(() => {
+                  const diskWarningRule = getAlertRuleByTypeAndSeverity(alertRules, 'disk', 'warning');
+                  const diskCriticalRule = getAlertRuleByTypeAndSeverity(alertRules, 'disk', 'critical');
+                  
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">磁盘使用率告警阈值</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {selectedHostId 
+                              ? `为主机 ${hosts.find(h => h.id === selectedHostId)?.display_name || selectedHostId} 设置磁盘告警阈值` 
+                              : '全局磁盘告警阈值设置'
+                            }
+                            {diskWarningRule && ` (持续${formatDuration(diskWarningRule.duration)}触发警告)`}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {diskWarningRule && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">警告:</span>
+                              <input 
+                                type="number" 
+                                value={getEffectiveThreshold('disk', 'warning') || ''}
+                                onChange={(e) => {
+                                  const newThreshold = parseFloat(e.target.value);
+                                  if (!isNaN(newThreshold)) {
+                                    updateThreshold('disk', 'warning', newThreshold);
+                                  }
+                                }}
+                                disabled={updatingThresholds['disk-warning']}
+                                className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
+                              />
+                              <span className="text-sm">%</span>
+                              {selectedHostId && hasHostSpecificRule('disk', 'warning') && (
+                                <span className="text-xs text-blue-500">特定</span>
+                              )}
+                            </div>
+                          )}
+                          {diskCriticalRule && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-red-500">严重:</span>
+                              <input 
+                                type="number" 
+                                value={getEffectiveThreshold('disk', 'critical') || ''}
+                                onChange={(e) => {
+                                  const newThreshold = parseFloat(e.target.value);
+                                  if (!isNaN(newThreshold)) {
+                                    updateThreshold('disk', 'critical', newThreshold);
+                                  }
+                                }}
+                                disabled={updatingThresholds['disk-critical']}
+                                className="w-16 px-2 py-1 border rounded dark:bg-gray-800 dark:border-gray-600" 
+                              />
+                              <span className="text-sm">%</span>
+                              {selectedHostId && hasHostSpecificRule('disk', 'critical') && (
+                                <span className="text-xs text-blue-500">特定</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
           </CardContent>
         </Card>
 
