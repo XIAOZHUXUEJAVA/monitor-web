@@ -8,37 +8,21 @@ import { ColoredProgress } from "@/components/ui/colored-progress";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { MiniSparkline } from "@/components/ui/mini-chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { fetchCpuData } from "@/lib/api";
 import { formatPercent, formatFrequency, formatTemperature, getStatusColor } from "@/lib/format";
-import { CpuData } from "@/types/api";
 import { Cpu, Thermometer, Zap } from "lucide-react";
+import { useMonitoringStore } from "@/store/monitoring-store";
 
 export default function CpuMonitor() {
-  const [cpuData, setCpuData] = useState<CpuData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // 使用Zustand store获取CPU数据
+  const cpuData = useMonitoringStore(state => state.cpuData);
+  const loading = useMonitoringStore(state => state.loading.cpu);
+  const error = useMonitoringStore(state => state.errors.cpu);
+  const fetchCpu = useMonitoringStore(state => state.fetchCpu);
 
-  const fetchData = async () => {
-    try {
-      const response = await fetchCpuData();
-      if (response.success) {
-        setCpuData(response.data);
-        setError(null);
-      } else {
-        setError(response.message || "获取 CPU 数据失败");
-      }
-    } catch (err) {
-      setError("网络错误");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 初始化加载数据
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000); // 每5秒刷新
-    return () => clearInterval(interval);
-  }, []);
+    fetchCpu();
+  }, [fetchCpu]);
 
   if (loading) {
     return (

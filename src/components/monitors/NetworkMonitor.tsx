@@ -16,37 +16,21 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { fetchNetworkData } from "@/lib/api";
 import { formatBytes, formatNetworkSpeed } from "@/lib/format";
-import { NetworkData } from "@/types/api";
 import { Wifi, WifiOff, Activity, Upload, Download } from "lucide-react";
+import { useMonitoringStore } from "@/store/monitoring-store";
 
 export default function NetworkMonitor() {
-  const [networkData, setNetworkData] = useState<NetworkData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // 使用Zustand store获取网络数据
+  const networkData = useMonitoringStore(state => state.networkData);
+  const loading = useMonitoringStore(state => state.loading.network);
+  const error = useMonitoringStore(state => state.errors.network);
+  const fetchNetwork = useMonitoringStore(state => state.fetchNetwork);
 
-  const fetchData = async () => {
-    try {
-      const response = await fetchNetworkData();
-      if (response.success) {
-        setNetworkData(response.data);
-        setError(null);
-      } else {
-        setError(response.message || "获取网络数据失败");
-      }
-    } catch (err) {
-      setError("网络错误");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 初始化加载数据
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchNetwork();
+  }, [fetchNetwork]);
 
   if (loading) {
     return (

@@ -19,10 +19,9 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { fetchMemoryData } from "@/lib/api";
 import { formatBytes, formatPercent, getStatusColor } from "@/lib/format";
-import { MemoryData } from "@/types/api";
 import { MemoryStick, HardDrive } from "lucide-react";
+import { useMonitoringStore } from "@/store/monitoring-store";
 
 const COLORS = {
   used: "#ef4444",
@@ -31,31 +30,16 @@ const COLORS = {
 };
 
 export default function MemoryMonitor() {
-  const [memoryData, setMemoryData] = useState<MemoryData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // 使用Zustand store获取内存数据
+  const memoryData = useMonitoringStore(state => state.memoryData);
+  const loading = useMonitoringStore(state => state.loading.memory);
+  const error = useMonitoringStore(state => state.errors.memory);
+  const fetchMemory = useMonitoringStore(state => state.fetchMemory);
 
-  const fetchData = async () => {
-    try {
-      const response = await fetchMemoryData();
-      if (response.success) {
-        setMemoryData(response.data);
-        setError(null);
-      } else {
-        setError(response.message || "获取内存数据失败");
-      }
-    } catch (err) {
-      setError("网络错误");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 初始化加载数据
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchMemory();
+  }, [fetchMemory]);
 
   if (loading) {
     return (

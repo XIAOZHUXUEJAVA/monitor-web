@@ -3,37 +3,21 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { fetchSystemInfo } from "@/lib/api";
 import { formatUptime, formatRelativeTime, formatOS, formatPlatform } from "@/lib/format";
-import { SystemInfo as SystemInfoType } from "@/types/api";
 import { Monitor, Server, Clock, Activity } from "lucide-react";
+import { useMonitoringStore } from "@/store/monitoring-store";
 
 export default function SystemInfo() {
-  const [systemInfo, setSystemInfo] = useState<SystemInfoType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // 使用Zustand store获取系统信息
+  const systemInfo = useMonitoringStore(state => state.systemInfo);
+  const loading = useMonitoringStore(state => state.loading.system);
+  const error = useMonitoringStore(state => state.errors.system);
+  const fetchSystem = useMonitoringStore(state => state.fetchSystem);
 
-  const fetchData = async () => {
-    try {
-      const response = await fetchSystemInfo();
-      if (response.success) {
-        setSystemInfo(response.data);
-        setError(null);
-      } else {
-        setError(response.message || "获取系统信息失败");
-      }
-    } catch (err) {
-      setError("网络错误");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 初始化加载数据
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000); // 每10秒刷新
-    return () => clearInterval(interval);
-  }, []);
+    fetchSystem();
+  }, [fetchSystem]);
 
   if (loading) {
     return (

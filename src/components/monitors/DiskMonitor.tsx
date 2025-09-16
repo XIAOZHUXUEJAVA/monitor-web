@@ -15,37 +15,21 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { fetchDiskData } from "@/lib/api";
 import { formatBytes, formatPercent, getStatusColor } from "@/lib/format";
-import { DiskData } from "@/types/api";
 import { HardDrive, Folder } from "lucide-react";
+import { useMonitoringStore } from "@/store/monitoring-store";
 
 export default function DiskMonitor() {
-  const [diskData, setDiskData] = useState<DiskData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // 使用Zustand store获取磁盘数据
+  const diskData = useMonitoringStore(state => state.diskData);
+  const loading = useMonitoringStore(state => state.loading.disk);
+  const error = useMonitoringStore(state => state.errors.disk);
+  const fetchDisk = useMonitoringStore(state => state.fetchDisk);
 
-  const fetchData = async () => {
-    try {
-      const response = await fetchDiskData();
-      if (response.success) {
-        setDiskData(response.data);
-        setError(null);
-      } else {
-        setError(response.message || "获取磁盘数据失败");
-      }
-    } catch (err) {
-      setError("网络错误");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 初始化加载数据
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchDisk();
+  }, [fetchDisk]);
 
   if (loading) {
     return (
