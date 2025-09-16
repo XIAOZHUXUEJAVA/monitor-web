@@ -306,7 +306,7 @@ export function Sidebar({
               </span>
             )}
           </Button>
-          
+{/*           
           <Button
             variant="ghost"
             className={cn(
@@ -316,7 +316,7 @@ export function Sidebar({
           >
             <RefreshCw className={cn("h-5 w-5", !isExpanded && "h-6 w-6")} />
             {isExpanded && <span className="flex-1 text-left">刷新数据</span>}
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>

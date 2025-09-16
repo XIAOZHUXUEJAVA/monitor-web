@@ -19,10 +19,10 @@ export function AnalyticsPage() {
     <div className="space-y-6">
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
-        <div>
+        {/* <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">数据分析</h2>
           <p className="text-gray-600 dark:text-gray-400">深入分析系统性能趋势和统计数据</p>
-        </div>
+        </div> */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             <Calendar className="h-4 w-4 mr-2" />

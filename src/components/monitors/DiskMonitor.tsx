@@ -16,6 +16,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatBytes, formatPercent, getStatusColor } from "@/lib/format";
+import { modernChartTheme, getChartConfig, getStatusGradient } from "@/lib/chart-theme";
+import { ModernTooltip } from "@/components/ui/modern-tooltip";
 import { HardDrive, Folder } from "lucide-react";
 import { useMonitoringStore } from "@/store/monitoring-store";
 
@@ -232,44 +234,79 @@ export default function DiskMonitor() {
         </div>
 
         {/* 磁盘使用量柱状图 */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">磁盘使用量对比</h4>
-          <div className="h-64">
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-red-500"></div>
+            磁盘使用量对比
+          </h4>
+          <div className="h-64 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="device" tick={{ fontSize: 12 }} />
+                <defs>
+                  <linearGradient id="usedBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f97316" />
+                    <stop offset="100%" stopColor="#ef4444" />
+                  </linearGradient>
+                  <linearGradient id="freeBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" />
+                    <stop offset="100%" stopColor="#22c55e" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="currentColor" 
+                  opacity={0.1}
+                  vertical={false}
+                />
+                <XAxis 
+                  dataKey="device" 
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-gray-600 dark:text-gray-400"
+                />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={50}
                   label={{
                     value: "容量 (GB)",
                     angle: -90,
                     position: "insideLeft",
+                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
                   }}
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  formatter={(value: number, name: string) => {
-                    const label = name === "used" ? "已使用" : "空闲";
-                    return [formatBytes(value * 1024 * 1024 * 1024), label];
+                  content={<ModernTooltip 
+                    formatter={(value: number, name: string) => {
+                      const label = name === "used" ? "已使用" : "空闲";
+                      return [formatBytes(value * 1024 * 1024 * 1024), label];
+                    }}
+                    labelFormatter={(label) => `磁盘: ${label}`}
+                  />}
+                  cursor={{
+                    fill: 'rgba(0, 0, 0, 0.05)',
+                    radius: 4
                   }}
-                  labelFormatter={(label) => `磁盘: ${label}`}
                 />
                 <Bar
                   dataKey="used"
                   stackId="a"
-                  fill="#ef4444"
+                  fill="url(#usedBarGradient)"
                   name="used"
                   radius={[0, 0, 0, 0]}
                 />
                 <Bar
                   dataKey="free"
                   stackId="a"
-                  fill="#22c55e"
+                  fill="url(#freeBarGradient)"
                   name="free"
-                  radius={[4, 4, 0, 0]}
+                  radius={[6, 6, 0, 0]}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -277,33 +314,66 @@ export default function DiskMonitor() {
         </div>
 
         {/* 磁盘使用率柱状图 */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">磁盘使用率对比</h4>
-          <div className="h-48">
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500"></div>
+            磁盘使用率对比
+          </h4>
+          <div className="h-48 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="device" tick={{ fontSize: 12 }} />
+                <defs>
+                  <linearGradient id="usageBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#6366f1" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="currentColor" 
+                  opacity={0.1}
+                  vertical={false}
+                />
+                <XAxis 
+                  dataKey="device" 
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-gray-600 dark:text-gray-400"
+                />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
                   label={{
                     value: "使用率 (%)",
                     angle: -90,
                     position: "insideLeft",
+                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
                   }}
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  formatter={(value: number) => [`${value}%`, "使用率"]}
-                  labelFormatter={(label) => `磁盘: ${label}`}
+                  content={<ModernTooltip 
+                    formatter={(value: number) => [`${value}%`, "使用率"]}
+                    labelFormatter={(label) => `磁盘: ${label}`}
+                  />}
+                  cursor={{
+                    fill: 'rgba(139, 92, 246, 0.1)',
+                    radius: 4
+                  }}
                 />
                 <Bar
                   dataKey="usage_percent"
-                  fill="#8b5cf6"
-                  radius={[4, 4, 0, 0]}
+                  fill="url(#usageBarGradient)"
+                  radius={[6, 6, 0, 0]}
+                  stroke="#ffffff"
+                  strokeWidth={1}
                 />
               </BarChart>
             </ResponsiveContainer>

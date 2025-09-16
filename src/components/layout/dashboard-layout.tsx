@@ -3,7 +3,7 @@
 import { Sidebar } from "@/components/ui/sidebar";
 import { PageManager } from "@/components/pages/PageManager";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppState, useMonitoringData } from "@/hooks/use-monitoring";
 import { useAppStore } from "@/store/app-store";
@@ -29,6 +29,9 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
     refresh,
     systemStatus,
   } = useMonitoringData();
+
+  // 从store获取updateSettings函数
+  const updateSettings = useAppStore(state => state.updateSettings);
   
   // 从store获取refreshKey
   const refreshKey = useAppStore(state => state.refreshKey);
@@ -91,14 +94,51 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
                 {isRefreshing ? "刷新中..." : "刷新数据"}
               </Button>
               
-              <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-200 dark:border-green-700">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                  {settings.autoRefresh 
-                    ? `实时监控中 (每${settings.refreshInterval}秒刷新)`
-                    : '手动刷新模式'
-                  }
-                </span>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateSettings({ ...settings, autoRefresh: !settings.autoRefresh })}
+                  className={`flex items-center gap-2 px-3 py-1 transition-all duration-200 ${
+                    settings.autoRefresh
+                      ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300'
+                      : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  {settings.autoRefresh ? (
+                    <>
+                      <Pause className="h-3 w-3" />
+                      <span className="text-sm font-medium">暂停刷新</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-3 w-3" />
+                      <span className="text-sm font-medium">启用刷新</span>
+                    </>
+                  )}
+                </Button>
+                
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all duration-200 ${
+                  settings.autoRefresh 
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    settings.autoRefresh 
+                      ? 'bg-green-500 animate-pulse' 
+                      : 'bg-gray-400'
+                  }`} />
+                  <span className={`text-sm font-medium ${
+                    settings.autoRefresh
+                      ? 'text-green-700 dark:text-green-300'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}>
+                    {settings.autoRefresh 
+                      ? `实时监控中 (每${settings.refreshInterval}秒刷新)`
+                      : '手动刷新模式'
+                    }
+                  </span>
+                </div>
               </div>
             </div>
           </div>

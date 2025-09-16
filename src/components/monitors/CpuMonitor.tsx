@@ -9,6 +9,8 @@ import { AnimatedNumber } from "@/components/ui/animated-number";
 import { MiniSparkline } from "@/components/ui/mini-chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { formatPercent, formatFrequency, formatTemperature, getStatusColor } from "@/lib/format";
+import { modernChartTheme, getChartConfig, getStatusGradient } from "@/lib/chart-theme";
+import { ModernTooltip } from "@/components/ui/modern-tooltip";
 import { Cpu, Thermometer, Zap } from "lucide-react";
 import { useMonitoringStore } from "@/store/monitoring-store";
 
@@ -174,33 +176,85 @@ export default function CpuMonitor() {
         </div>
 
         {/* CPU 使用率历史图表 */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">使用率趋势 (最近 {cpuData.history.length} 个数据点)</h4>
-          <div className="h-64">
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"></div>
+            使用率趋势 (最近 {cpuData.history.length} 个数据点)
+          </h4>
+          <div className="h-64 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="cpuGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="cpuLineGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#8b5cf6" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="currentColor" 
+                  opacity={0.1}
+                  vertical={false}
+                />
                 <XAxis 
                   dataKey="time" 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
                   interval="preserveStartEnd"
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <YAxis 
                   domain={[0, 100]}
-                  tick={{ fontSize: 12 }}
-                  label={{ value: '使用率 (%)', angle: -90, position: 'insideLeft' }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
+                  label={{ 
+                    value: '使用率 (%)', 
+                    angle: -90, 
+                    position: 'insideLeft',
+                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
+                  }}
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip 
-                  formatter={(value: number) => [`${value}%`, 'CPU 使用率']}
-                  labelFormatter={(label) => `时间: ${label}`}
+                  content={<ModernTooltip 
+                    formatter={(value: number) => [`${value}%`, 'CPU 使用率']}
+                    labelFormatter={(label) => `时间: ${label}`}
+                  />}
+                  cursor={{ 
+                    stroke: '#6366f1', 
+                    strokeWidth: 1, 
+                    strokeDasharray: '4 4',
+                    opacity: 0.5
+                  }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="usage" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
-                  activeDot={{ r: 5, stroke: '#3b82f6', strokeWidth: 2 }}
+                  stroke="url(#cpuLineGradient)"
+                  strokeWidth={3}
+                  fill="url(#cpuGradient)"
+                  dot={{ 
+                    fill: '#6366f1', 
+                    strokeWidth: 2, 
+                    r: 4,
+                    stroke: '#ffffff',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                  }}
+                  activeDot={{ 
+                    r: 6, 
+                    stroke: '#6366f1', 
+                    strokeWidth: 3,
+                    fill: '#ffffff',
+                    filter: 'drop-shadow(0 4px 8px rgba(99,102,241,0.3))'
+                  }}
+                  connectNulls
                 />
               </LineChart>
             </ResponsiveContainer>

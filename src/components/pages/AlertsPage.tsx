@@ -91,7 +91,7 @@ export function AlertsPage() {
       {/* 页面标题和操作 */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">告警中心</h2>
+          {/* <h2 className="text-2xl font-bold text-gray-900 dark:text-white">告警中心</h2> */}
           <p className="text-gray-600 dark:text-gray-400">
             监控系统告警和通知 · 共 {alerts.length} 条告警，{unResolvedCount} 条待处理
           </p>

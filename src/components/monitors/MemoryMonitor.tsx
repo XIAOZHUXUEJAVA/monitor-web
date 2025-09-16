@@ -20,6 +20,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import { formatBytes, formatPercent, getStatusColor } from "@/lib/format";
+import { modernChartTheme, getChartConfig, getStatusGradient } from "@/lib/chart-theme";
+import { ModernTooltip } from "@/components/ui/modern-tooltip";
 import { MemoryStick, HardDrive } from "lucide-react";
 import { useMonitoringStore } from "@/store/monitoring-store";
 
@@ -164,41 +166,133 @@ export default function MemoryMonitor() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 内存分布饼图 */}
           <div className="space-y-4">
-            <h4 className="text-sm font-medium">内存分布</h4>
-            <div className="h-64">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-gradient-to-r from-pink-500 to-amber-500"></div>
+              内存分布
+            </h4>
+            <div className="relative h-64 p-6 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                  <defs>
+                    {/* 增强渐变效果 */}
+                    <linearGradient id="usedMemoryGradient" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#ec4899" />
+                      <stop offset="30%" stopColor="#f43f5e" />
+                      <stop offset="70%" stopColor="#ef4444" />
+                      <stop offset="100%" stopColor="#dc2626" />
+                    </linearGradient>
+                    <linearGradient id="freeMemoryGradient" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#06b6d4" />
+                      <stop offset="30%" stopColor="#0891b2" />
+                      <stop offset="70%" stopColor="#10b981" />
+                      <stop offset="100%" stopColor="#059669" />
+                    </linearGradient>
+                    {/* 中央圆形阴影 */}
+                    <filter id="innerShadow">
+                      <feDropShadow dx="0" dy="2" stdDeviation="4" floodOpacity="0.1"/>
+                    </filter>
+                    {/* 外部阴影 */}
+                    <filter id="outerShadow">
+                      <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.15"/>
+                    </filter>
+                  </defs>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={2}
                     dataKey="value"
+                    startAngle={90}
+                    endAngle={450}
                   >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                    <Cell 
+                      fill="url(#usedMemoryGradient)" 
+                      stroke="#ffffff" 
+                      strokeWidth={3}
+                      filter="url(#outerShadow)"
+                    />
+                    <Cell 
+                      fill="url(#freeMemoryGradient)" 
+                      stroke="#ffffff" 
+                      strokeWidth={3}
+                      filter="url(#outerShadow)"
+                    />
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) =>
-                      formatBytes(value * 1024 * 1024 * 1024)
-                    }
+                    content={<ModernTooltip 
+                      formatter={(value: number, name: string) => [
+                        formatBytes(value * 1024 * 1024 * 1024),
+                        name === '已使用' ? '已使用内存' : '空闲内存'
+                      ]}
+                    />}
                   />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-4">
-              {pieData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-sm">{item.name}</span>
+              
+              {/* 中央数据显示 */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <AnimatedNumber 
+                      value={memoryData.usage_percent} 
+                      suffix="%" 
+                      decimals={1}
+                    />
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    已使用
+                  </div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    <AnimatedNumber 
+                      value={memoryData.used} 
+                      suffix=" GB" 
+                      decimals={1}
+                    /> / <AnimatedNumber 
+                      value={memoryData.total} 
+                      suffix=" GB" 
+                      decimals={1}
+                    />
+                  </div>
                 </div>
-              ))}
+              </div>
+            </div>
+            
+            {/* 增强图例 */}
+            <div className="flex justify-center gap-8">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-red-600 shadow-lg"></div>
+                  <div className="absolute inset-0 w-4 h-4 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-red-600 animate-ping opacity-20"></div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">已使用</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <AnimatedNumber 
+                      value={memoryData.used} 
+                      suffix=" GB" 
+                      decimals={1}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-cyan-500 via-teal-500 to-green-600 shadow-lg"></div>
+                  <div className="absolute inset-0 w-4 h-4 rounded-full bg-gradient-to-br from-cyan-500 via-teal-500 to-green-600 animate-ping opacity-20"></div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">空闲</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <AnimatedNumber 
+                      value={memoryData.free} 
+                      suffix=" GB" 
+                      decimals={1}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -278,45 +372,93 @@ export default function MemoryMonitor() {
         </div>
 
         {/* 内存使用历史图表 */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">使用率趋势</h4>
-          <div className="h-64">
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-pink-500 to-amber-500"></div>
+            使用率趋势
+          </h4>
+          <div className="h-64 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="memoryGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ec4899" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#ec4899" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="memoryLineGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#ec4899" />
+                    <stop offset="100%" stopColor="#f59e0b" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
+                  opacity={0.1}
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="time"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
                   interval="preserveStartEnd"
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
                   label={{
                     value: "使用率 (%)",
                     angle: -90,
                     position: "insideLeft",
+                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
                   }}
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  formatter={(value: number, name: string) => {
-                    if (name === "usage_percent") {
-                      return [`${value}%`, "内存使用率"];
-                    }
-                    return [
-                      formatBytes(value * 1024 * 1024 * 1024),
-                      "已使用内存",
-                    ];
+                  content={<ModernTooltip 
+                    formatter={(value: number, name: string) => {
+                      if (name === "usage_percent") {
+                        return [`${value}%`, "内存使用率"];
+                      }
+                      return [
+                        formatBytes(value * 1024 * 1024 * 1024),
+                        "已使用内存",
+                      ];
+                    }}
+                    labelFormatter={(label) => `时间: ${label}`}
+                  />}
+                  cursor={{
+                    stroke: '#ec4899',
+                    strokeWidth: 1,
+                    strokeDasharray: '4 4',
+                    opacity: 0.5
                   }}
-                  labelFormatter={(label) => `时间: ${label}`}
                 />
                 <Line
                   type="monotone"
                   dataKey="usage_percent"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  dot={{ fill: "#22c55e", strokeWidth: 2, r: 3 }}
-                  activeDot={{ r: 5, stroke: "#22c55e", strokeWidth: 2 }}
+                  stroke="url(#memoryLineGradient)"
+                  strokeWidth={3}
+                  fill="url(#memoryGradient)"
+                  dot={{
+                    fill: '#ec4899',
+                    strokeWidth: 2,
+                    r: 4,
+                    stroke: '#ffffff',
+                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                  }}
+                  activeDot={{
+                    r: 6,
+                    stroke: '#ec4899',
+                    strokeWidth: 3,
+                    fill: '#ffffff',
+                    filter: 'drop-shadow(0 4px 8px rgba(236,72,153,0.3))'
+                  }}
+                  connectNulls
                 />
               </LineChart>
             </ResponsiveContainer>

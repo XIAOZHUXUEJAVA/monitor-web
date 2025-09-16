@@ -17,6 +17,8 @@ import {
   Bar,
 } from "recharts";
 import { formatBytes, formatNetworkSpeed } from "@/lib/format";
+import { modernChartTheme, getChartConfig, getStatusGradient } from "@/lib/chart-theme";
+import { ModernTooltip } from "@/components/ui/modern-tooltip";
 import { Wifi, WifiOff, Activity, Upload, Download } from "lucide-react";
 import { useMonitoringStore } from "@/store/monitoring-store";
 
@@ -244,47 +246,117 @@ export default function NetworkMonitor() {
         </div>
 
         {/* 网络流量历史图表 */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">实时流量趋势</h4>
-          <div className="h-64">
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+            实时流量趋势
+          </h4>
+          <div className="h-64 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="sentGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="recvGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="sentLineGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#06b6d4" />
+                  </linearGradient>
+                  <linearGradient id="recvLineGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#22c55e" />
+                    <stop offset="100%" stopColor="#10b981" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
+                  opacity={0.1}
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="time"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
                   interval="preserveStartEnd"
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={50}
                   label={{
                     value: "流量 (MB/s)",
                     angle: -90,
                     position: "insideLeft",
+                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
                   }}
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  formatter={(value: number, name: string) => {
-                    const label = name === "sent" ? "上传" : "下载";
-                    return [`${value} MB/s`, label];
+                  content={<ModernTooltip 
+                    formatter={(value: number, name: string) => {
+                      const label = name === "sent" ? "上传" : "下载";
+                      return [`${value} MB/s`, label];
+                    }}
+                    labelFormatter={(label) => `时间: ${label}`}
+                  />}
+                  cursor={{
+                    stroke: '#06b6d4',
+                    strokeWidth: 1,
+                    strokeDasharray: '4 4',
+                    opacity: 0.5
                   }}
-                  labelFormatter={(label) => `时间: ${label}`}
                 />
                 <Line
                   type="monotone"
                   dataKey="sent"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ fill: "#3b82f6", strokeWidth: 2, r: 3 }}
+                  stroke="url(#sentLineGradient)"
+                  strokeWidth={3}
+                  fill="url(#sentGradient)"
+                  dot={{
+                    fill: '#3b82f6',
+                    strokeWidth: 2,
+                    r: 4,
+                    stroke: '#ffffff'
+                  }}
+                  activeDot={{
+                    r: 6,
+                    stroke: '#3b82f6',
+                    strokeWidth: 3,
+                    fill: '#ffffff',
+                    filter: 'drop-shadow(0 4px 8px rgba(59,130,246,0.3))'
+                  }}
                   name="sent"
+                  connectNulls
                 />
                 <Line
                   type="monotone"
                   dataKey="recv"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  dot={{ fill: "#22c55e", strokeWidth: 2, r: 3 }}
+                  stroke="url(#recvLineGradient)"
+                  strokeWidth={3}
+                  fill="url(#recvGradient)"
+                  dot={{
+                    fill: '#22c55e',
+                    strokeWidth: 2,
+                    r: 4,
+                    stroke: '#ffffff'
+                  }}
+                  activeDot={{
+                    r: 6,
+                    stroke: '#22c55e',
+                    strokeWidth: 3,
+                    fill: '#ffffff',
+                    filter: 'drop-shadow(0 4px 8px rgba(34,197,94,0.3))'
+                  }}
                   name="recv"
+                  connectNulls
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -292,42 +364,81 @@ export default function NetworkMonitor() {
         </div>
 
         {/* 网卡流量对比 */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">网卡流量对比</h4>
-          <div className="h-48">
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+            网卡流量对比
+          </h4>
+          <div className="h-48 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={interfaceData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <defs>
+                  <linearGradient id="sentBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#1d4ed8" />
+                  </linearGradient>
+                  <linearGradient id="recvBarGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" />
+                    <stop offset="100%" stopColor="#15803d" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="currentColor" 
+                  opacity={0.1}
+                  vertical={false}
+                />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  className="text-gray-600 dark:text-gray-400"
+                />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={50}
                   label={{
                     value: "流量 (MB)",
                     angle: -90,
                     position: "insideLeft",
+                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
                   }}
+                  className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  formatter={(value: number, name: string) => {
-                    const label = name === "sent" ? "发送" : "接收";
-                    return [`${value} MB`, label];
+                  content={<ModernTooltip 
+                    formatter={(value: number, name: string) => {
+                      const label = name === "sent" ? "发送" : "接收";
+                      return [`${value} MB`, label];
+                    }}
+                    labelFormatter={(label) => `网卡: ${label}`}
+                  />}
+                  cursor={{
+                    fill: 'rgba(0, 0, 0, 0.05)',
+                    radius: 4
                   }}
-                  labelFormatter={(label) => `网卡: ${label}`}
                 />
                 <Bar
                   dataKey="sent"
-                  fill="#3b82f6"
+                  fill="url(#sentBarGradient)"
                   name="sent"
                   radius={[4, 4, 0, 0]}
+                  stroke="#ffffff"
+                  strokeWidth={1}
                 />
                 <Bar
                   dataKey="recv"
-                  fill="#22c55e"
+                  fill="url(#recvBarGradient)"
                   name="recv"
                   radius={[4, 4, 0, 0]}
+                  stroke="#ffffff"
+                  strokeWidth={1}
                 />
               </BarChart>
             </ResponsiveContainer>
