@@ -133,9 +133,9 @@ export default function HostList({ onHostSelect, onHostEdit, onHostConfig }: Hos
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Host Management</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -149,7 +149,7 @@ export default function HostList({ onHostSelect, onHostEdit, onHostConfig }: Hos
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <Card className="p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700">
           <div className="flex items-center">
             <div className="p-3 bg-green-500 rounded-lg">

@@ -16,13 +16,11 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
   // 使用自定义hooks管理状态
   const {
     sidebarCollapsed,
-    isDarkMode,
     activeSection,
     isRefreshing,
     settings,
     setSidebarCollapsed,
     setActiveSection,
-    toggleDarkMode,
   } = useAppState();
   
   const {
@@ -40,6 +38,7 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
   const getPageTitle = () => {
     const titles: Record<string, string> = {
       overview: "系统概览",
+      hosts: "主机管理",
       cpu: "CPU 监控",
       memory: "内存监控",
       disk: "磁盘监控",
@@ -59,8 +58,6 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
         <Sidebar
           collapsed={sidebarCollapsed}
           onCollapsedChange={setSidebarCollapsed}
-          isDarkMode={isDarkMode}
-          onDarkModeToggle={toggleDarkMode}
           activeSection={activeSection}
           onSectionChange={setActiveSection}
           systemStatus={systemStatus}

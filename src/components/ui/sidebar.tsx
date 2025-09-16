@@ -15,9 +15,6 @@ import {
   Monitor,
   Settings,
   Bell,
-  RefreshCw,
-  Moon,
-  Sun,
   Home,
   TrendingUp,
   Server,
@@ -27,8 +24,6 @@ interface SidebarProps {
   className?: string;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
-  isDarkMode?: boolean;
-  onDarkModeToggle?: () => void;
   activeSection?: string;
   onSectionChange?: (section: string) => void;
   systemStatus?: {
@@ -51,7 +46,6 @@ const navigation = [
     name: "主机管理",
     icon: Server,
     badge: null,
-    href: "/hosts",
   },
   {
     id: "cpu",
@@ -107,8 +101,6 @@ export function Sidebar({
   className,
   collapsed = false,
   onCollapsedChange,
-  isDarkMode = false,
-  onDarkModeToggle,
   activeSection = "overview",
   onSectionChange,
   systemStatus,
@@ -250,11 +242,7 @@ export function Sidebar({
                   !isExpanded && "justify-center px-0"
                 )}
                 onClick={() => {
-                  if (item.href) {
-                    window.location.href = item.href;
-                  } else {
-                    onSectionChange?.(item.id);
-                  }
+                  onSectionChange?.(item.id);
                 }}
               >
                 <item.icon className={cn("h-5 w-5 transition-all duration-300", !isExpanded && "h-6 w-6")} />
@@ -304,38 +292,7 @@ export function Sidebar({
 
       {/* Footer Actions */}
       <div className="p-4 border-t border-gray-200/50 dark:border-gray-700/50">
-        <div className="space-y-2">
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full justify-start gap-3 h-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-out transform hover:scale-[1.02]",
-              !isExpanded && "justify-center px-0"
-            )}
-            onClick={onDarkModeToggle}
-          >
-            {isDarkMode ? (
-              <Sun className={cn("h-5 w-5 text-yellow-500 transition-all duration-300", !isExpanded && "h-6 w-6")} />
-            ) : (
-              <Moon className={cn("h-5 w-5 text-gray-600 transition-all duration-300", !isExpanded && "h-6 w-6")} />
-            )}
-            {isExpanded && (
-              <span className="flex-1 text-left transition-all duration-300 ease-out">
-                {isDarkMode ? "浅色模式" : "深色模式"}
-              </span>
-            )}
-          </Button>
-{/*           
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full justify-start gap-3 h-10 hover:bg-gray-100 dark:hover:bg-gray-800",
-              !isExpanded && "justify-center px-0"
-            )}
-          >
-            <RefreshCw className={cn("h-5 w-5", !isExpanded && "h-6 w-6")} />
-            {isExpanded && <span className="flex-1 text-left">刷新数据</span>}
-          </Button> */}
-        </div>
+        {/* 主题切换已移动到设置页面 */}
       </div>
     </div>
   );
