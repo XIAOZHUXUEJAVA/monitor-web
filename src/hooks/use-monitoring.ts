@@ -117,15 +117,8 @@ export function useAppState() {
   // 初始化主题和设置
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // 加载保存的设置
+      // 加载保存的设置，会自动应用主题和侧边栏设置
       loadSettings();
-      
-      // 初始化主题
-      const savedTheme = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const shouldUseDark = savedTheme ? savedTheme === 'dark' : prefersDark;
-      
-      useAppStore.getState().setDarkMode(shouldUseDark);
     }
   }, [loadSettings]);
 

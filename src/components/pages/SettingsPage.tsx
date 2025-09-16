@@ -96,6 +96,14 @@ export function SettingsPage() {
       // 更新store中的设置
       updateSettings(localSettings);
       
+      // 应用主题设置
+      const { applyTheme, setSidebarCollapsed } = useAppStore.getState();
+      applyTheme(localSettings.themeMode);
+      
+      // 立即应用侧边栏默认状态设置
+      const shouldCollapse = localSettings.sidebarDefaultState === 'collapsed';
+      setSidebarCollapsed(shouldCollapse);
+      
       // 显示成功提示
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -113,8 +121,16 @@ export function SettingsPage() {
       refreshInterval: 60,  // 默认60秒（1分钟）
       historyPoints: 20,
       autoRefresh: true,
+      themeMode: 'system' as const,
+      sidebarDefaultState: 'expanded' as const,
+      enableAnimations: true,
     };
     setLocalSettings(defaultSettings);
+    
+    // 立即应用默认设置
+    const { applyTheme, setSidebarCollapsed } = useAppStore.getState();
+    applyTheme(defaultSettings.themeMode);
+    setSidebarCollapsed(false); // 默认展开
   };
   
   // 获取特定主机和指标类型的有效阈值（优先使用主机特定规则，否则使用全局规则）
@@ -567,7 +583,15 @@ export function SettingsPage() {
                 <h4 className="font-medium">主题模式</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">选择界面主题风格</p>
               </div>
-              <Select defaultValue="system">
+              <Select 
+                value={localSettings.themeMode} 
+                onValueChange={(value: 'system' | 'light' | 'dark') => {
+                  setLocalSettings({
+                    ...localSettings,
+                    themeMode: value
+                  });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -584,7 +608,15 @@ export function SettingsPage() {
                 <h4 className="font-medium">侧边栏默认状态</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">侧边栏的默认展开状态</p>
               </div>
-              <Select defaultValue="expanded">
+              <Select 
+                value={localSettings.sidebarDefaultState} 
+                onValueChange={(value: 'expanded' | 'collapsed') => {
+                  setLocalSettings({
+                    ...localSettings,
+                    sidebarDefaultState: value
+                  });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -600,7 +632,19 @@ export function SettingsPage() {
                 <h4 className="font-medium">启用动画效果</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">界面切换和数据更新的动画效果</p>
               </div>
-              <Badge variant="outline">启用</Badge>
+              <button
+                onClick={() => setLocalSettings({
+                  ...localSettings,
+                  enableAnimations: !localSettings.enableAnimations
+                })}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  localSettings.enableAnimations
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {localSettings.enableAnimations ? '已启用' : '已禁用'}
+              </button>
             </div>
           </CardContent>
         </Card>

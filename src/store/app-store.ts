@@ -27,6 +27,9 @@ interface AppState {
     refreshInterval: number; // 数据刷新间隔（秒）
     historyPoints: number;   // 历史数据点数
     autoRefresh: boolean;    // 是否启用自动刷新
+    themeMode: 'system' | 'light' | 'dark'; // 主题模式
+    sidebarDefaultState: 'expanded' | 'collapsed'; // 侧边栏默认状态
+    enableAnimations: boolean; // 启用动画效果
   };
   
   // Actions
@@ -38,6 +41,7 @@ interface AppState {
   toggleDarkMode: () => void;
   updateSettings: (settings: Partial<AppState['settings']>) => void;
   loadSettings: () => void;
+  applyTheme: (themeMode: 'system' | 'light' | 'dark') => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -63,6 +67,9 @@ export const useAppStore = create<AppState>()(
         refreshInterval: 60,    // 默认60秒刷新（1分钟）
         historyPoints: 20,      // 默认20个历史数据点
         autoRefresh: true,      // 默认启用自动刷新
+        themeMode: 'system',    // 默认跟随系统
+        sidebarDefaultState: 'expanded', // 默认展开侧边栏
+        enableAnimations: true, // 默认启用动画
       },
       
       // Actions
@@ -131,10 +138,64 @@ export const useAppStore = create<AppState>()(
             try {
               const settings = JSON.parse(savedSettings);
               set({ settings }, false, 'loadSettings');
+              
+              // 应用主题设置
+              get().applyTheme(settings.themeMode || 'system');
+              
+              // 应用侧边栏默认状态
+              const shouldCollapse = settings.sidebarDefaultState === 'collapsed';
+              set({ sidebarCollapsed: shouldCollapse }, false, 'applySidebarDefault');
+              
             } catch (error) {
               console.error('Failed to load settings:', error);
             }
+          } else {
+            // 初次访问，应用默认主题
+            get().applyTheme('system');
           }
+        }
+      },
+      
+      // 应用主题设置
+      applyTheme: (themeMode: 'system' | 'light' | 'dark') => {
+        if (typeof window !== 'undefined') {
+          let shouldBeDark = false;
+          
+          if (themeMode === 'system') {
+            // 检测系统主题
+            shouldBeDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            // 监听系统主题变化
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            const handleChange = (e: MediaQueryListEvent) => {
+              const currentSettings = get().settings;
+              if (currentSettings.themeMode === 'system') {
+                if (e.matches) {
+                  document.documentElement.classList.add('dark');
+                  set({ isDarkMode: true }, false, 'systemThemeChange');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  set({ isDarkMode: false }, false, 'systemThemeChange');
+                }
+              }
+            };
+            
+            // 移除旧的监听器（如果存在）
+            mediaQuery.removeEventListener('change', handleChange);
+            // 添加新的监听器
+            mediaQuery.addEventListener('change', handleChange);
+          } else {
+            shouldBeDark = themeMode === 'dark';
+          }
+          
+          // 更新DOM
+          if (shouldBeDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+          
+          set({ isDarkMode: shouldBeDark }, false, 'applyTheme');
         }
       },
     }),
