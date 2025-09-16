@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ColoredProgress } from "@/components/ui/colored-progress";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { MiniSparkline } from "@/components/ui/mini-chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { fetchCpuData } from "@/lib/api";
 import { formatPercent, formatFrequency, formatTemperature, getStatusColor } from "@/lib/format";
@@ -106,9 +109,26 @@ export default function CpuMonitor() {
             <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg">
               <Cpu className="h-5 w-5 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              CPU 监控
-            </span>
+            <div className="flex-1">
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                CPU 监控
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <AnimatedNumber 
+                  value={cpuData.usage} 
+                  suffix="%" 
+                  className="text-lg font-bold"
+                  decimals={1}
+                />
+                <div className="w-16 h-6">
+                  <MiniSparkline 
+                    data={cpuData.history.slice(-10).map(h => h.usage)}
+                    color={usageStatus === 'good' ? '#22c55e' : usageStatus === 'warning' ? '#f59e0b' : '#ef4444'}
+                    height={24}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <div className={`status-indicator status-${usageStatus} w-3 h-3 rounded-full bg-${usageStatus === 'good' ? 'green' : usageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
         </CardTitle>
@@ -123,9 +143,10 @@ export default function CpuMonitor() {
                 {formatPercent(cpuData.usage)}
               </Badge>
             </div>
-            <Progress 
+            <ColoredProgress 
               value={cpuData.usage} 
-              className="h-2"
+              size="md"
+              showAnimation={true}
             />
           </div>
 
@@ -135,7 +156,11 @@ export default function CpuMonitor() {
               <span className="text-sm font-medium">频率</span>
             </div>
             <div className="text-lg font-semibold">
-              {formatFrequency(cpuData.frequency)}
+              <AnimatedNumber 
+                value={cpuData.frequency} 
+                suffix=" MHz" 
+                decimals={1}
+              />
             </div>
           </div>
 
@@ -146,7 +171,11 @@ export default function CpuMonitor() {
                 <span className="text-sm font-medium">温度</span>
               </div>
               <div className={`text-lg font-semibold ${tempColor}`}>
-                {formatTemperature(cpuData.temperature)}
+                <AnimatedNumber 
+                  value={cpuData.temperature} 
+                  suffix="°C" 
+                  decimals={1}
+                />
               </div>
             </div>
           )}

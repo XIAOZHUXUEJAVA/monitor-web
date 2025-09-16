@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { MiniSparkline } from "@/components/ui/mini-chart";
 import {
   LineChart,
   Line,
@@ -110,7 +112,7 @@ export default function NetworkMonitor() {
   }));
 
   const activeInterfaces = networkData.interfaces.filter(iface => iface.is_up).length;
-  const networkStatus = activeInterfaces > 0 ? 'good' : 'danger';
+  const networkStatus: 'good' | 'warning' | 'danger' = activeInterfaces > 0 ? 'good' : 'danger';
 
   return (
     <Card className="monitor-card w-full">
@@ -120,11 +122,40 @@ export default function NetworkMonitor() {
             <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg">
               <Activity className="h-5 w-5 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
-              网络监控
-            </span>
+            <div className="flex-1">
+              <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                网络监控
+              </span>
+              <div className="flex items-center gap-4 mt-1">
+                <div className="flex items-center gap-1 text-sm">
+                  <Upload className="h-3 w-3 text-blue-500" />
+                  <AnimatedNumber 
+                    value={networkData.total_bytes_sent / (1024 * 1024 * 1024)} 
+                    suffix=" GB" 
+                    decimals={2}
+                    className="font-semibold"
+                  />
+                </div>
+                <div className="flex items-center gap-1 text-sm">
+                  <Download className="h-3 w-3 text-green-500" />
+                  <AnimatedNumber 
+                    value={networkData.total_bytes_recv / (1024 * 1024 * 1024)} 
+                    suffix=" GB" 
+                    decimals={2}
+                    className="font-semibold"
+                  />
+                </div>
+                <div className="w-16 h-6">
+                  <MiniSparkline 
+                    data={networkData.history.slice(-10).map(h => h.bytes_recv_per_sec / (1024 * 1024))}
+                    color="#06b6d4"
+                    height={24}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className={`status-indicator status-${networkStatus} w-3 h-3 rounded-full bg-${networkStatus === 'good' ? 'green' : networkStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
+          <div className={`status-indicator status-${networkStatus} w-3 h-3 rounded-full ${networkStatus === 'good' ? 'bg-green-500' : 'bg-red-500'}`}></div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -136,7 +167,11 @@ export default function NetworkMonitor() {
               <span className="text-sm font-medium">总发送</span>
             </div>
             <div className="text-2xl font-bold text-blue-600">
-              {formatBytes(networkData.total_bytes_sent)}
+              <AnimatedNumber 
+                value={networkData.total_bytes_sent / (1024 * 1024 * 1024)} 
+                suffix=" GB" 
+                decimals={2}
+              />
             </div>
           </div>
 
@@ -146,7 +181,11 @@ export default function NetworkMonitor() {
               <span className="text-sm font-medium">总接收</span>
             </div>
             <div className="text-2xl font-bold text-green-600">
-              {formatBytes(networkData.total_bytes_recv)}
+              <AnimatedNumber 
+                value={networkData.total_bytes_recv / (1024 * 1024 * 1024)} 
+                suffix=" GB" 
+                decimals={2}
+              />
             </div>
           </div>
         </div>
@@ -183,7 +222,11 @@ export default function NetworkMonitor() {
                       发送字节
                     </span>
                     <div className="font-medium text-blue-600">
-                      {formatBytes(iface.bytes_sent)}
+                      <AnimatedNumber 
+                        value={iface.bytes_sent / (1024 * 1024)} 
+                        suffix=" MB" 
+                        decimals={1}
+                      />
                     </div>
                   </div>
                   <div>
@@ -191,7 +234,11 @@ export default function NetworkMonitor() {
                       接收字节
                     </span>
                     <div className="font-medium text-green-600">
-                      {formatBytes(iface.bytes_recv)}
+                      <AnimatedNumber 
+                        value={iface.bytes_recv / (1024 * 1024)} 
+                        suffix=" MB" 
+                        decimals={1}
+                      />
                     </div>
                   </div>
                   <div>

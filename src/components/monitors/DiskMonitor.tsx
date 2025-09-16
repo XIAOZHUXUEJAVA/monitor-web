@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ColoredProgress } from "@/components/ui/colored-progress";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import {
   BarChart,
   Bar,
@@ -114,9 +116,30 @@ export default function DiskMonitor() {
             <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg shadow-lg">
               <HardDrive className="h-5 w-5 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-              磁盘监控
-            </span>
+            <div className="flex-1">
+              <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                磁盘监控
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <AnimatedNumber 
+                  value={totalUsagePercent} 
+                  suffix="%" 
+                  className="text-lg font-bold"
+                  decimals={1}
+                />
+                <span className="text-sm text-gray-500">
+                  (<AnimatedNumber 
+                    value={diskData.total_used} 
+                    suffix=" GB" 
+                    decimals={1}
+                  /> / <AnimatedNumber 
+                    value={diskData.total_capacity} 
+                    suffix=" GB" 
+                    decimals={1}
+                  />)
+                </span>
+              </div>
+            </div>
           </div>
           <div className={`status-indicator status-${overallUsageStatus} w-3 h-3 rounded-full bg-${overallUsageStatus === 'good' ? 'green' : overallUsageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
         </CardTitle>
@@ -130,7 +153,11 @@ export default function DiskMonitor() {
               {formatPercent(totalUsagePercent)}
             </Badge>
           </div>
-          <Progress value={totalUsagePercent} className="h-3" />
+          <ColoredProgress 
+            value={totalUsagePercent} 
+            size="lg"
+            showAnimation={true}
+          />
           <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
             <span>
               {formatBytes(diskData.total_used * 1024 * 1024 * 1024)} 已使用
@@ -170,14 +197,22 @@ export default function DiskMonitor() {
                   </div>
 
                   <div className="space-y-2">
-                    <Progress value={disk.usage_percent} className="h-2" />
+                    <ColoredProgress 
+                      value={disk.usage_percent} 
+                      size="md"
+                      showAnimation={true}
+                    />
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600 dark:text-gray-400">
                           总容量
                         </span>
                         <div className="font-medium">
-                          {formatBytes(disk.total * 1024 * 1024 * 1024)}
+                          <AnimatedNumber 
+                            value={disk.total} 
+                            suffix=" GB" 
+                            decimals={1}
+                          />
                         </div>
                       </div>
                       <div>
@@ -185,7 +220,11 @@ export default function DiskMonitor() {
                           已使用
                         </span>
                         <div className="font-medium text-red-600">
-                          {formatBytes(disk.used * 1024 * 1024 * 1024)}
+                          <AnimatedNumber 
+                            value={disk.used} 
+                            suffix=" GB" 
+                            decimals={1}
+                          />
                         </div>
                       </div>
                       <div>
@@ -193,7 +232,11 @@ export default function DiskMonitor() {
                           可用
                         </span>
                         <div className="font-medium text-green-600">
-                          {formatBytes(disk.free * 1024 * 1024 * 1024)}
+                          <AnimatedNumber 
+                            value={disk.free} 
+                            suffix=" GB" 
+                            decimals={1}
+                          />
                         </div>
                       </div>
                     </div>

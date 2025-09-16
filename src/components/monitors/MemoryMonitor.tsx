@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ColoredProgress } from "@/components/ui/colored-progress";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { MiniSparkline } from "@/components/ui/mini-chart";
 import {
   PieChart,
   Pie,
@@ -130,9 +133,26 @@ export default function MemoryMonitor() {
             <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg">
               <MemoryStick className="h-5 w-5 text-white" />
             </div>
-            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              内存监控
-            </span>
+            <div className="flex-1">
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                内存监控
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <AnimatedNumber 
+                  value={memoryData.usage_percent} 
+                  suffix="%" 
+                  className="text-lg font-bold"
+                  decimals={1}
+                />
+                <div className="w-16 h-6">
+                  <MiniSparkline 
+                    data={memoryData.history.slice(-10).map(h => h.usage_percent)}
+                    color={usageStatus === 'good' ? '#22c55e' : usageStatus === 'warning' ? '#f59e0b' : '#ef4444'}
+                    height={24}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
           <div className={`status-indicator status-${usageStatus} w-3 h-3 rounded-full bg-${usageStatus === 'good' ? 'green' : usageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
         </CardTitle>
@@ -146,7 +166,11 @@ export default function MemoryMonitor() {
               {formatPercent(memoryData.usage_percent)}
             </Badge>
           </div>
-          <Progress value={memoryData.usage_percent} className="h-3" />
+          <ColoredProgress 
+            value={memoryData.usage_percent} 
+            size="lg"
+            showAnimation={true}
+          />
           <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
             <span>
               {formatBytes(memoryData.used * 1024 * 1024 * 1024)} 已使用
@@ -207,7 +231,11 @@ export default function MemoryMonitor() {
                   总内存
                 </span>
                 <span className="font-medium">
-                  {formatBytes(memoryData.total * 1024 * 1024 * 1024)}
+                  <AnimatedNumber 
+                    value={memoryData.total} 
+                    suffix=" GB" 
+                    decimals={1}
+                  />
                 </span>
               </div>
               <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -215,7 +243,11 @@ export default function MemoryMonitor() {
                   已使用
                 </span>
                 <span className="font-medium text-red-600">
-                  {formatBytes(memoryData.used * 1024 * 1024 * 1024)}
+                  <AnimatedNumber 
+                    value={memoryData.used} 
+                    suffix=" GB" 
+                    decimals={1}
+                  />
                 </span>
               </div>
               <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -223,7 +255,11 @@ export default function MemoryMonitor() {
                   可用
                 </span>
                 <span className="font-medium text-green-600">
-                  {formatBytes(memoryData.available * 1024 * 1024 * 1024)}
+                  <AnimatedNumber 
+                    value={memoryData.available} 
+                    suffix=" GB" 
+                    decimals={1}
+                  />
                 </span>
               </div>
 
@@ -250,9 +286,10 @@ export default function MemoryMonitor() {
                       {formatBytes(memoryData.swap_used * 1024 * 1024 * 1024)}
                     </span>
                   </div>
-                  <Progress
+                  <ColoredProgress
                     value={(memoryData.swap_used / memoryData.swap_total) * 100}
-                    className="h-2"
+                    size="sm"
+                    colorScheme="warning"
                   />
                 </div>
               </div>
