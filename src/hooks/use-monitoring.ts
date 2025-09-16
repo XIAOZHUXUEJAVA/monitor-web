@@ -57,9 +57,8 @@ export function useMonitoringData() {
   }, [refreshKey, fetchAllData]);
 
   // 定时更新数据
+  const settings = useAppStore(state => state.settings);
   useEffect(() => {
-    const settings = useAppStore.getState().settings;
-    
     if (!settings.autoRefresh) {
       return; // 如果禁用自动刷新，不设置定时器
     }
@@ -69,14 +68,8 @@ export function useMonitoringData() {
     }, settings.refreshInterval * 1000); // 转换为毫秒
 
     return () => clearInterval(interval);
-  }, [fetchAllData]);
+  }, [fetchAllData, settings.refreshInterval, settings.autoRefresh]);
   
-  // 监听设置变化，重新设置定时器
-  const settings = useAppStore(state => state.settings);
-  useEffect(() => {
-    // 当设置变化时，这个effect会重新运行，上面的effect也会重新运行
-  }, [settings.refreshInterval, settings.autoRefresh]);
-
   // 同步系统状态到应用状态
   useEffect(() => {
     if (cpuData && memoryData && diskData && networkData) {

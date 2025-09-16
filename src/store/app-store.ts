@@ -60,7 +60,7 @@ export const useAppStore = create<AppState>()(
       
       // 默认设置
       settings: {
-        refreshInterval: 5,     // 默认5秒刷新
+        refreshInterval: 60,    // 默认60秒刷新（1分钟）
         historyPoints: 20,      // 默认20个历史数据点
         autoRefresh: true,      // 默认启用自动刷新
       },

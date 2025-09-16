@@ -60,7 +60,7 @@ export function SettingsPage() {
   // 重置为默认设置
   const handleReset = () => {
     const defaultSettings = {
-      refreshInterval: 5,
+      refreshInterval: 60,  // 默认60秒（1分钟）
       historyPoints: 20,
       autoRefresh: true,
     };
@@ -124,12 +124,14 @@ export function SettingsPage() {
                 })}
                 className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600 min-w-[100px]"
               >
-                <option value={1}>1秒</option>
-                <option value={3}>3秒</option>
-                <option value={5}>5秒</option>
                 <option value={10}>10秒</option>
                 <option value={30}>30秒</option>
                 <option value={60}>1分钟</option>
+                <option value={120}>2分钟</option>
+                <option value={300}>5分钟</option>
+                <option value={5}>5秒</option>
+                <option value={3}>3秒</option>
+                <option value={1}>1秒</option>
               </select>
             </div>
 
