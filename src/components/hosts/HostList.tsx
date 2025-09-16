@@ -19,8 +19,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { hostAPI } from '@/lib/host-api'
-import { Host, HostListResponse } from '@/types/host'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { getHosts } from '@/lib/host-api'
+import { Host } from '@/types/host'
 
 interface HostListProps {
   onHostSelect?: (host: Host) => void
@@ -32,8 +39,8 @@ export default function HostList({ onHostSelect, onHostEdit, onHostConfig }: Hos
   const [hosts, setHosts] = useState<Host[]>([])
   const [loading, setLoading] = useState(true)
   const [searchKeyword, setSearchKeyword] = useState('')
-  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('')
-  const [selectedStatus, setSelectedStatus] = useState<string>('')
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('all')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [pageSize] = useState(20)
@@ -44,19 +51,36 @@ export default function HostList({ onHostSelect, onHostEdit, onHostConfig }: Hos
   const fetchHosts = async () => {
     try {
       setLoading(true)
-      const params = {
-        page: currentPage,
-        size: pageSize,
-        ...(searchKeyword && { keyword: searchKeyword }),
-        ...(selectedEnvironment && { environment: selectedEnvironment }),
-        ...(selectedStatus && { status: selectedStatus })
+      const allHosts = await getHosts()
+      
+      // Apply client-side filtering
+      let filteredHosts = allHosts
+      
+      if (searchKeyword) {
+        filteredHosts = filteredHosts.filter(host => 
+          host.hostname.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+          host.ip_address.toLowerCase().includes(searchKeyword.toLowerCase())
+        )
       }
       
-      const response: HostListResponse = await hostAPI.getHosts(params)
-      setHosts(response.hosts)
-      setTotalCount(response.total)
+      if (selectedEnvironment && selectedEnvironment !== 'all') {
+        filteredHosts = filteredHosts.filter(host => host.environment === selectedEnvironment)
+      }
+      
+      if (selectedStatus && selectedStatus !== 'all') {
+        filteredHosts = filteredHosts.filter(host => host.status === selectedStatus)
+      }
+      
+      // Apply pagination
+      const startIndex = (currentPage - 1) * pageSize
+      const paginatedHosts = filteredHosts.slice(startIndex, startIndex + pageSize)
+      
+      setHosts(paginatedHosts)
+      setTotalCount(filteredHosts.length)
     } catch (error) {
       console.error('Failed to fetch hosts:', error)
+      setHosts([])
+      setTotalCount(0)
     } finally {
       setLoading(false)
     }
@@ -198,28 +222,30 @@ export default function HostList({ onHostSelect, onHostEdit, onHostConfig }: Hos
           </form>
 
           <div className="flex gap-3">
-            <select
-              value={selectedEnvironment}
-              onChange={(e) => setSelectedEnvironment(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Environments</option>
-              <option value="production">Production</option>
-              <option value="staging">Staging</option>
-              <option value="development">Development</option>
-              <option value="testing">Testing</option>
-            </select>
+            <Select value={selectedEnvironment} onValueChange={setSelectedEnvironment}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Environments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Environments</SelectItem>
+                <SelectItem value="production">Production</SelectItem>
+                <SelectItem value="staging">Staging</SelectItem>
+                <SelectItem value="development">Development</SelectItem>
+                <SelectItem value="testing">Testing</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-              <option value="warning">Warning</option>
-            </select>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+              </SelectContent>
+            </Select>
 
             <Button variant="outline" onClick={fetchHosts}>
               <RefreshCw className="w-4 h-4 mr-2" />

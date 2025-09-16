@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppStore } from "@/store/app-store";
 import { getAlertRules, updateAlertRuleThreshold, createHostAlertRule, AlertRule, getAlertRuleByTypeAndSeverity, formatDuration } from "@/lib/alert-api";
 import { getHosts } from "@/lib/host-api";
@@ -228,23 +229,27 @@ export function SettingsPage() {
                 <h4 className="font-medium">数据刷新间隔</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">设置自动刷新数据的时间间隔</p>
               </div>
-              <select 
-                value={localSettings.refreshInterval}
-                onChange={(e) => setLocalSettings({
+              <Select
+                value={localSettings.refreshInterval.toString()}
+                onValueChange={(value: string) => setLocalSettings({
                   ...localSettings,
-                  refreshInterval: parseInt(e.target.value)
+                  refreshInterval: parseInt(value)
                 })}
-                className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600 min-w-[100px]"
               >
-                <option value={10}>10秒</option>
-                <option value={30}>30秒</option>
-                <option value={60}>1分钟</option>
-                <option value={120}>2分钟</option>
-                <option value={300}>5分钟</option>
-                <option value={5}>5秒</option>
-                <option value={3}>3秒</option>
-                <option value={1}>1秒</option>
-              </select>
+                <SelectTrigger className="min-w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10秒</SelectItem>
+                  <SelectItem value="30">30秒</SelectItem>
+                  <SelectItem value="60">1分钟</SelectItem>
+                  <SelectItem value="120">2分钟</SelectItem>
+                  <SelectItem value="300">5分钟</SelectItem>
+                  <SelectItem value="5">5秒</SelectItem>
+                  <SelectItem value="3">3秒</SelectItem>
+                  <SelectItem value="1">1秒</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
@@ -252,19 +257,23 @@ export function SettingsPage() {
                 <h4 className="font-medium">历史数据点数</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">图表显示的历史数据点数量</p>
               </div>
-              <select 
-                value={localSettings.historyPoints}
-                onChange={(e) => setLocalSettings({
+              <Select
+                value={localSettings.historyPoints.toString()}
+                onValueChange={(value: string) => setLocalSettings({
                   ...localSettings,
-                  historyPoints: parseInt(e.target.value)
+                  historyPoints: parseInt(value)
                 })}
-                className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600 min-w-[100px]"
               >
-                <option value={10}>10个</option>
-                <option value={20}>20个</option>
-                <option value={50}>50个</option>
-                <option value={100}>100个</option>
-              </select>
+                <SelectTrigger className="min-w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10个</SelectItem>
+                  <SelectItem value="20">20个</SelectItem>
+                  <SelectItem value="50">50个</SelectItem>
+                  <SelectItem value="100">100个</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
@@ -313,18 +322,22 @@ export function SettingsPage() {
                 {loadingHosts ? (
                   <span className="text-sm text-gray-500">加载中...</span>
                 ) : (
-                  <select 
-                    value={selectedHostId || ''}
-                    onChange={(e) => setSelectedHostId(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                  <Select
+                    value={selectedHostId?.toString() || 'global'}
+                    onValueChange={(value: string) => setSelectedHostId(value === 'global' ? null : parseInt(value))}
                   >
-                    <option value="">全局规则</option>
-                    {Array.isArray(hosts) && hosts.map((host) => (
-                      <option key={host.id} value={host.id}>
-                        {host.display_name} ({host.hostname})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="全局规则" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">全局规则</SelectItem>
+                      {Array.isArray(hosts) && hosts.map((host) => (
+                        <SelectItem key={host.id} value={host.id.toString()}>
+                          {host.display_name} ({host.hostname})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>
@@ -554,11 +567,16 @@ export function SettingsPage() {
                 <h4 className="font-medium">主题模式</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">选择界面主题风格</p>
               </div>
-              <select className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600">
-                <option value="system">跟随系统</option>
-                <option value="light">浅色模式</option>
-                <option value="dark">深色模式</option>
-              </select>
+              <Select defaultValue="system">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="system">跟随系统</SelectItem>
+                  <SelectItem value="light">浅色模式</SelectItem>
+                  <SelectItem value="dark">深色模式</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
@@ -566,10 +584,15 @@ export function SettingsPage() {
                 <h4 className="font-medium">侧边栏默认状态</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">侧边栏的默认展开状态</p>
               </div>
-              <select className="px-3 py-1 border rounded-md dark:bg-gray-800 dark:border-gray-600">
-                <option value="expanded">展开</option>
-                <option value="collapsed">折叠</option>
-              </select>
+              <Select defaultValue="expanded">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expanded">展开</SelectItem>
+                  <SelectItem value="collapsed">折叠</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between">
