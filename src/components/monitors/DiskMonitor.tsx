@@ -16,17 +16,26 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatBytes, formatPercent, getStatusColor } from "@/lib/format";
-import { modernChartTheme, getChartConfig, getStatusGradient } from "@/lib/chart-theme";
+import {
+  modernChartTheme,
+  getChartConfig,
+  getStatusGradient,
+} from "@/lib/chart-theme";
 import { ModernTooltip } from "@/components/ui/modern-tooltip";
 import { HardDrive, Folder } from "lucide-react";
 import { useMonitoringStore } from "@/store/monitoring-store";
+import { useAlertThresholds } from "@/hooks/use-alert-thresholds";
 
 export default function DiskMonitor() {
   // 使用Zustand store获取磁盘数据
-  const diskData = useMonitoringStore(state => state.diskData);
-  const loading = useMonitoringStore(state => state.loading.disk);
-  const error = useMonitoringStore(state => state.errors.disk);
-  
+  const diskData = useMonitoringStore((state) => state.diskData);
+  const loading = useMonitoringStore((state) => state.loading.disk);
+  const error = useMonitoringStore((state) => state.errors.disk);
+
+  // 获取动态告警阈值
+  const { getThresholds } = useAlertThresholds();
+  const diskThresholds = getThresholds("disk");
+
   // 移除了个别的fetch调用，现在使用统一的数据获取机制
 
   if (loading) {
@@ -75,10 +84,7 @@ export default function DiskMonitor() {
 
   const totalUsagePercent =
     (diskData.total_used / diskData.total_capacity) * 100;
-  const totalUsageColor = getStatusColor(totalUsagePercent, {
-    warning: 80,
-    danger: 95,
-  });
+  const totalUsageColor = getStatusColor(totalUsagePercent, diskThresholds);
 
   // 柱状图数据
   const chartData = diskData.disks.map((disk) => ({
@@ -88,7 +94,12 @@ export default function DiskMonitor() {
     usage_percent: Math.round(disk.usage_percent * 10) / 10,
   }));
 
-  const overallUsageStatus = totalUsagePercent >= 95 ? 'danger' : totalUsagePercent >= 80 ? 'warning' : 'good';
+  const overallUsageStatus =
+    totalUsagePercent >= diskThresholds.danger
+      ? "danger"
+      : totalUsagePercent >= diskThresholds.warning
+      ? "warning"
+      : "good";
 
   return (
     <Card className="monitor-card w-full">
@@ -103,27 +114,39 @@ export default function DiskMonitor() {
                 磁盘监控
               </span>
               <div className="flex items-center gap-2 mt-1">
-                <AnimatedNumber 
-                  value={totalUsagePercent} 
-                  suffix="%" 
+                <AnimatedNumber
+                  value={totalUsagePercent}
+                  suffix="%"
                   className="text-lg font-bold"
                   decimals={1}
                 />
                 <span className="text-sm text-gray-500">
-                  (<AnimatedNumber 
-                    value={diskData.total_used} 
-                    suffix=" GB" 
+                  (
+                  <AnimatedNumber
+                    value={diskData.total_used}
+                    suffix=" GB"
                     decimals={1}
-                  /> / <AnimatedNumber 
-                    value={diskData.total_capacity} 
-                    suffix=" GB" 
+                  />{" "}
+                  /{" "}
+                  <AnimatedNumber
+                    value={diskData.total_capacity}
+                    suffix=" GB"
                     decimals={1}
-                  />)
+                  />
+                  )
                 </span>
               </div>
             </div>
           </div>
-          <div className={`status-indicator status-${overallUsageStatus} w-3 h-3 rounded-full bg-${overallUsageStatus === 'good' ? 'green' : overallUsageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
+          <div
+            className={`status-indicator status-${overallUsageStatus} w-3 h-3 rounded-full bg-${
+              overallUsageStatus === "good"
+                ? "green"
+                : overallUsageStatus === "warning"
+                ? "yellow"
+                : "red"
+            }-500`}
+          ></div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -135,8 +158,8 @@ export default function DiskMonitor() {
               {formatPercent(totalUsagePercent)}
             </Badge>
           </div>
-          <ColoredProgress 
-            value={totalUsagePercent} 
+          <ColoredProgress
+            value={totalUsagePercent}
             size="lg"
             showAnimation={true}
           />
@@ -155,10 +178,7 @@ export default function DiskMonitor() {
           <h4 className="text-sm font-medium">磁盘详情</h4>
           <div className="grid gap-4">
             {diskData.disks.map((disk) => {
-              const usageColor = getStatusColor(disk.usage_percent, {
-                warning: 80,
-                danger: 95,
-              });
+              const usageColor = getStatusColor(disk.usage_percent, diskThresholds);
 
               return (
                 <div
@@ -179,8 +199,8 @@ export default function DiskMonitor() {
                   </div>
 
                   <div className="space-y-2">
-                    <ColoredProgress 
-                      value={disk.usage_percent} 
+                    <ColoredProgress
+                      value={disk.usage_percent}
                       size="md"
                       showAnimation={true}
                     />
@@ -190,9 +210,9 @@ export default function DiskMonitor() {
                           总容量
                         </span>
                         <div className="font-medium">
-                          <AnimatedNumber 
-                            value={disk.total} 
-                            suffix=" GB" 
+                          <AnimatedNumber
+                            value={disk.total}
+                            suffix=" GB"
                             decimals={1}
                           />
                         </div>
@@ -202,9 +222,9 @@ export default function DiskMonitor() {
                           已使用
                         </span>
                         <div className="font-medium text-red-600">
-                          <AnimatedNumber 
-                            value={disk.used} 
-                            suffix=" GB" 
+                          <AnimatedNumber
+                            value={disk.used}
+                            suffix=" GB"
                             decimals={1}
                           />
                         </div>
@@ -214,9 +234,9 @@ export default function DiskMonitor() {
                           可用
                         </span>
                         <div className="font-medium text-green-600">
-                          <AnimatedNumber 
-                            value={disk.free} 
-                            suffix=" GB" 
+                          <AnimatedNumber
+                            value={disk.free}
+                            suffix=" GB"
                             decimals={1}
                           />
                         </div>
@@ -246,23 +266,35 @@ export default function DiskMonitor() {
                 margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
                 <defs>
-                  <linearGradient id="usedBarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="usedBarGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#f97316" />
                     <stop offset="100%" stopColor="#ef4444" />
                   </linearGradient>
-                  <linearGradient id="freeBarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="freeBarGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#10b981" />
                     <stop offset="100%" stopColor="#22c55e" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid 
-                  strokeDasharray="3 3" 
-                  stroke="currentColor" 
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
                   opacity={0.1}
                   vertical={false}
                 />
-                <XAxis 
-                  dataKey="device" 
+                <XAxis
+                  dataKey="device"
                   tick={{ fontSize: 11, fontWeight: 500 }}
                   tickLine={false}
                   axisLine={false}
@@ -277,21 +309,27 @@ export default function DiskMonitor() {
                     value: "容量 (GB)",
                     angle: -90,
                     position: "insideLeft",
-                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
+                    style: {
+                      textAnchor: "middle",
+                      fontSize: 11,
+                      fontWeight: 500,
+                    },
                   }}
                   className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  content={<ModernTooltip 
-                    formatter={(value: number, name: string) => {
-                      const label = name === "used" ? "已使用" : "空闲";
-                      return [formatBytes(value * 1024 * 1024 * 1024), label];
-                    }}
-                    labelFormatter={(label) => `磁盘: ${label}`}
-                  />}
+                  content={
+                    <ModernTooltip
+                      formatter={(value: number, name: string) => {
+                        const label = name === "used" ? "已使用" : "空闲";
+                        return [formatBytes(value * 1024 * 1024 * 1024), label];
+                      }}
+                      labelFormatter={(label) => `磁盘: ${label}`}
+                    />
+                  }
                   cursor={{
-                    fill: 'rgba(0, 0, 0, 0.05)',
-                    radius: 4
+                    fill: "rgba(0, 0, 0, 0.05)",
+                    radius: 4,
                   }}
                 />
                 <Bar
@@ -326,19 +364,25 @@ export default function DiskMonitor() {
                 margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
               >
                 <defs>
-                  <linearGradient id="usageBarGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="usageBarGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#8b5cf6" />
                     <stop offset="100%" stopColor="#6366f1" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid 
-                  strokeDasharray="3 3" 
-                  stroke="currentColor" 
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
                   opacity={0.1}
                   vertical={false}
                 />
-                <XAxis 
-                  dataKey="device" 
+                <XAxis
+                  dataKey="device"
                   tick={{ fontSize: 11, fontWeight: 500 }}
                   tickLine={false}
                   axisLine={false}
@@ -354,18 +398,24 @@ export default function DiskMonitor() {
                     value: "使用率 (%)",
                     angle: -90,
                     position: "insideLeft",
-                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
+                    style: {
+                      textAnchor: "middle",
+                      fontSize: 11,
+                      fontWeight: 500,
+                    },
                   }}
                   className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  content={<ModernTooltip 
-                    formatter={(value: number) => [`${value}%`, "使用率"]}
-                    labelFormatter={(label) => `磁盘: ${label}`}
-                  />}
+                  content={
+                    <ModernTooltip
+                      formatter={(value: number) => [`${value}%`, "使用率"]}
+                      labelFormatter={(label) => `磁盘: ${label}`}
+                    />
+                  }
                   cursor={{
-                    fill: 'rgba(139, 92, 246, 0.1)',
-                    radius: 4
+                    fill: "rgba(139, 92, 246, 0.1)",
+                    radius: 4,
                   }}
                 />
                 <Bar

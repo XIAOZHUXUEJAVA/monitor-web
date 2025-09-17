@@ -26,6 +26,8 @@ import {
   updateAlertRuleThreshold,
   AlertRule,
 } from "@/lib/alert-api";
+import { useAppStore } from "@/store/app-store";
+import { useAlertRulesStore } from "@/store/alert-rules-store";
 
 // 监控配置接口
 interface MonitoringConfig {
@@ -41,6 +43,8 @@ interface MonitoringConfig {
 }
 
 export function SettingsPage() {
+  const { updateRule, triggerRefresh } = useAlertRulesStore();
+
   const [configs, setConfigs] = useState<MonitoringConfig[]>([]);
   const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [loadingConfigs, setLoadingConfigs] = useState(false);
@@ -64,6 +68,9 @@ export function SettingsPage() {
   const configTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
   const thresholdTimeouts = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
+  // 从 app store 获取设置更新函数
+  const updateSettings = useAppStore((state) => state.updateSettings);
+
   // 加载监控配置
   const loadConfigs = async () => {
     try {
@@ -74,11 +81,50 @@ export function SettingsPage() {
       }
       const configList = await response.json();
       setConfigs(Array.isArray(configList) ? configList : []);
+
+      // 同步数据库配置到前端状态
+      syncConfigsToAppStore(configList);
     } catch (error) {
       console.error("Failed to load configs:", error);
       setConfigs([]);
     } finally {
       setLoadingConfigs(false);
+    }
+  };
+
+  // 同步数据库配置到前端状态
+  const syncConfigsToAppStore = (configList: MonitoringConfig[]) => {
+    const refreshIntervalConfig = configList.find(
+      (c) => c.key === "refresh_interval"
+    );
+    const historyPointsConfig = configList.find(
+      (c) => c.key === "history_points"
+    );
+    const autoRefreshConfig = configList.find((c) => c.key === "auto_refresh");
+
+    const newSettings: any = {};
+
+    if (refreshIntervalConfig) {
+      const interval = parseInt(refreshIntervalConfig.value);
+      if (!isNaN(interval) && interval >= 10) {
+        newSettings.refreshInterval = interval;
+      }
+    }
+
+    if (historyPointsConfig) {
+      const points = parseInt(historyPointsConfig.value);
+      if (!isNaN(points) && points >= 5) {
+        newSettings.historyPoints = points;
+      }
+    }
+
+    if (autoRefreshConfig) {
+      newSettings.autoRefresh = autoRefreshConfig.value === "true";
+    }
+
+    // 如果有配置需要更新，则更新前端状态
+    if (Object.keys(newSettings).length > 0) {
+      updateSettings(newSettings);
     }
   };
 
@@ -185,6 +231,26 @@ export function SettingsPage() {
     }
   };
 
+  // 验证告警阈值是否合法
+  const isValidThreshold = (value: string): boolean => {
+    if (!value) return false;
+    const num = parseFloat(value);
+    return !isNaN(num) && num >= 0 && num <= 100;
+  };
+
+  // 获取告警阈值的显示值（用于验证状态）
+  const getThresholdDisplayValue = (
+    metricType: string,
+    severity: string
+  ): string => {
+    const key = `${metricType}-${severity}`;
+    if (localThresholdValues[key] !== undefined) {
+      return localThresholdValues[key];
+    }
+    const threshold = getAlertThreshold(metricType, severity);
+    return threshold !== undefined ? threshold.toString() : "";
+  };
+
   // 清理定时器
   useEffect(() => {
     return () => {
@@ -210,12 +276,42 @@ export function SettingsPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      // 立即同步到前端状态，无需等待重新加载
+      syncSingleConfigToAppStore(key, value);
+
       // 重新加载配置
       await loadConfigs();
     } catch (error) {
       console.error(`Failed to update config ${key}:`, error);
     } finally {
       setSavingConfigs((prev) => ({ ...prev, [key]: false }));
+    }
+  };
+
+  // 同步单个配置到前端状态
+  const syncSingleConfigToAppStore = (key: string, value: string) => {
+    const newSettings: any = {};
+
+    switch (key) {
+      case "refresh_interval":
+        const interval = parseInt(value);
+        if (!isNaN(interval) && interval >= 10) {
+          newSettings.refreshInterval = interval;
+        }
+        break;
+      case "history_points":
+        const points = parseInt(value);
+        if (!isNaN(points) && points >= 5) {
+          newSettings.historyPoints = points;
+        }
+        break;
+      case "auto_refresh":
+        newSettings.autoRefresh = value === "true";
+        break;
+    }
+
+    if (Object.keys(newSettings).length > 0) {
+      updateSettings(newSettings);
     }
   };
 
@@ -232,8 +328,20 @@ export function SettingsPage() {
       console.log(`更新 ${metricType}-${severity} 规则，阈值: ${threshold}`);
       await updateAlertRuleThreshold(metricType, severity, threshold);
 
+      // 更新全局告警规则状态
+      updateRule(metricType, severity, threshold);
+
+      // 触发告警规则刷新，通知其他组件
+      triggerRefresh();
+
       // 重新加载告警规则
       await loadAlertRules();
+
+      // 同时触发告警管理状态的刷新，确保告警列表和统计数据同步
+      const alertManagementStore = await import(
+        "@/store/alert-management-store"
+      );
+      alertManagementStore.useAlertManagementStore.getState().refresh();
     } catch (error) {
       console.error(`Failed to update threshold for ${key}:`, error);
     } finally {
@@ -301,13 +409,26 @@ export function SettingsPage() {
                     min="10"
                     max="300"
                     value={getConfigValue("refresh_interval")}
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const value = e.target.value;
+                      // 立即更新本地状态，允许自由编辑
+                      setLocalConfigValues((prev) => ({
+                        ...prev,
+                        refresh_interval: value,
+                      }));
+
+                      // 只有当值有效时才发送更新请求
                       if (value && parseInt(value) >= 10) {
-                        handleConfigChange("refresh_interval", value);
+                        debouncedUpdateConfig("refresh_interval", value);
                       }
                     }}
-                    className="w-24"
+                    className={`w-24 ${
+                      getConfigValue("refresh_interval") &&
+                      (parseInt(getConfigValue("refresh_interval")) < 10 ||
+                        parseInt(getConfigValue("refresh_interval")) > 300)
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : ""
+                    }`}
                     disabled={savingConfigs["refresh_interval"]}
                     placeholder="10-300"
                   />
@@ -316,6 +437,23 @@ export function SettingsPage() {
                   </span>
                   {savingConfigs["refresh_interval"] && (
                     <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                  )}
+                  {/* 验证状态指示器 */}
+                  {getConfigValue("refresh_interval") && (
+                    <>
+                      {parseInt(getConfigValue("refresh_interval")) >= 10 &&
+                      parseInt(getConfigValue("refresh_interval")) <= 300 ? (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-xs">将自动保存</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-red-600">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-xs">需要10-300秒</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -337,13 +475,26 @@ export function SettingsPage() {
                     min="5"
                     max="100"
                     value={getConfigValue("history_points")}
-                    onChange={(e) => {
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const value = e.target.value;
+                      // 立即更新本地状态，允许自由编辑
+                      setLocalConfigValues((prev) => ({
+                        ...prev,
+                        history_points: value,
+                      }));
+
+                      // 只有当值有效时才发送更新请求
                       if (value && parseInt(value) >= 5) {
-                        handleConfigChange("history_points", value);
+                        debouncedUpdateConfig("history_points", value);
                       }
                     }}
-                    className="w-24"
+                    className={`w-24 ${
+                      getConfigValue("history_points") &&
+                      (parseInt(getConfigValue("history_points")) < 5 ||
+                        parseInt(getConfigValue("history_points")) > 100)
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : ""
+                    }`}
                     disabled={savingConfigs["history_points"]}
                     placeholder="5-100"
                   />
@@ -352,6 +503,23 @@ export function SettingsPage() {
                   </span>
                   {savingConfigs["history_points"] && (
                     <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                  )}
+                  {/* 验证状态指示器 */}
+                  {getConfigValue("history_points") && (
+                    <>
+                      {parseInt(getConfigValue("history_points")) >= 5 &&
+                      parseInt(getConfigValue("history_points")) <= 100 ? (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-xs">将自动保存</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-red-600">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-xs">需要5-100个</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -370,7 +538,7 @@ export function SettingsPage() {
                 <div className="flex items-center gap-3">
                   <Switch
                     checked={getConfigValue("auto_refresh") === "true"}
-                    onCheckedChange={(checked) => {
+                    onCheckedChange={(checked: boolean) => {
                       handleConfigChange("auto_refresh", checked.toString());
                     }}
                     disabled={savingConfigs["auto_refresh"]}
@@ -419,21 +587,28 @@ export function SettingsPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-600 dark:text-gray-400 w-12">
                         警告:
                       </span>
                       <input
                         type="number"
                         value={getAlertThreshold("cpu", "warning") || ""}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           handleThresholdChange(
                             "cpu",
                             "warning",
                             e.target.value
                           );
                         }}
-                        className="w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          getThresholdDisplayValue("cpu", "warning") &&
+                          !isValidThreshold(
+                            getThresholdDisplayValue("cpu", "warning")
+                          )
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
                         min="0"
                         max="100"
                         placeholder="0-100"
@@ -445,24 +620,49 @@ export function SettingsPage() {
                       {updatingThresholds["cpu-warning"] && (
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
                       )}
+                      {/* 验证状态指示器 */}
+                      {getThresholdDisplayValue("cpu", "warning") && (
+                        <>
+                          {isValidThreshold(
+                            getThresholdDisplayValue("cpu", "warning")
+                          ) ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs">将自动保存</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs">需要0-100%</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-600 dark:text-gray-400 w-12">
                         严重:
                       </span>
                       <input
                         type="number"
                         value={getAlertThreshold("cpu", "critical") || ""}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           handleThresholdChange(
                             "cpu",
                             "critical",
                             e.target.value
                           );
                         }}
-                        className="w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          getThresholdDisplayValue("cpu", "critical") &&
+                          !isValidThreshold(
+                            getThresholdDisplayValue("cpu", "critical")
+                          )
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
                         min="0"
                         max="100"
                         placeholder="0-100"
@@ -473,6 +673,24 @@ export function SettingsPage() {
                       </span>
                       {updatingThresholds["cpu-critical"] && (
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+                      )}
+                      {/* 验证状态指示器 */}
+                      {getThresholdDisplayValue("cpu", "critical") && (
+                        <>
+                          {isValidThreshold(
+                            getThresholdDisplayValue("cpu", "critical")
+                          ) ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs">将自动保存</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs">需要0-100%</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -489,21 +707,28 @@ export function SettingsPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-600 dark:text-gray-400 w-12">
                         警告:
                       </span>
                       <input
                         type="number"
                         value={getAlertThreshold("memory", "warning") || ""}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           handleThresholdChange(
                             "memory",
                             "warning",
                             e.target.value
                           );
                         }}
-                        className="w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          getThresholdDisplayValue("memory", "warning") &&
+                          !isValidThreshold(
+                            getThresholdDisplayValue("memory", "warning")
+                          )
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
                         min="0"
                         max="100"
                         placeholder="0-100"
@@ -515,24 +740,49 @@ export function SettingsPage() {
                       {updatingThresholds["memory-warning"] && (
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
                       )}
+                      {/* 验证状态指示器 */}
+                      {getThresholdDisplayValue("memory", "warning") && (
+                        <>
+                          {isValidThreshold(
+                            getThresholdDisplayValue("memory", "warning")
+                          ) ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs">将自动保存</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs">需要0-100%</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-600 dark:text-gray-400 w-12">
                         严重:
                       </span>
                       <input
                         type="number"
                         value={getAlertThreshold("memory", "critical") || ""}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           handleThresholdChange(
                             "memory",
                             "critical",
                             e.target.value
                           );
                         }}
-                        className="w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          getThresholdDisplayValue("memory", "critical") &&
+                          !isValidThreshold(
+                            getThresholdDisplayValue("memory", "critical")
+                          )
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
                         min="0"
                         max="100"
                         placeholder="0-100"
@@ -543,6 +793,24 @@ export function SettingsPage() {
                       </span>
                       {updatingThresholds["memory-critical"] && (
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+                      )}
+                      {/* 验证状态指示器 */}
+                      {getThresholdDisplayValue("memory", "critical") && (
+                        <>
+                          {isValidThreshold(
+                            getThresholdDisplayValue("memory", "critical")
+                          ) ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs">将自动保存</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs">需要0-100%</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -559,21 +827,28 @@ export function SettingsPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-600 dark:text-gray-400 w-12">
                         警告:
                       </span>
                       <input
                         type="number"
                         value={getAlertThreshold("disk", "warning") || ""}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           handleThresholdChange(
                             "disk",
                             "warning",
                             e.target.value
                           );
                         }}
-                        className="w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          getThresholdDisplayValue("disk", "warning") &&
+                          !isValidThreshold(
+                            getThresholdDisplayValue("disk", "warning")
+                          )
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
                         min="0"
                         max="100"
                         placeholder="0-100"
@@ -585,24 +860,49 @@ export function SettingsPage() {
                       {updatingThresholds["disk-warning"] && (
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
                       )}
+                      {/* 验证状态指示器 */}
+                      {getThresholdDisplayValue("disk", "warning") && (
+                        <>
+                          {isValidThreshold(
+                            getThresholdDisplayValue("disk", "warning")
+                          ) ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs">将自动保存</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs">需要0-100%</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm text-gray-600 dark:text-gray-400 w-12">
                         严重:
                       </span>
                       <input
                         type="number"
                         value={getAlertThreshold("disk", "critical") || ""}
-                        onChange={(e) => {
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           handleThresholdChange(
                             "disk",
                             "critical",
                             e.target.value
                           );
                         }}
-                        className="w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className={`w-20 px-2 py-1 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          getThresholdDisplayValue("disk", "critical") &&
+                          !isValidThreshold(
+                            getThresholdDisplayValue("disk", "critical")
+                          )
+                            ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
                         min="0"
                         max="100"
                         placeholder="0-100"
@@ -613,6 +913,24 @@ export function SettingsPage() {
                       </span>
                       {updatingThresholds["disk-critical"] && (
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+                      )}
+                      {/* 验证状态指示器 */}
+                      {getThresholdDisplayValue("disk", "critical") && (
+                        <>
+                          {isValidThreshold(
+                            getThresholdDisplayValue("disk", "critical")
+                          ) ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs">将自动保存</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-red-600">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs">需要0-100%</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

@@ -7,19 +7,41 @@ import { Progress } from "@/components/ui/progress";
 import { ColoredProgress } from "@/components/ui/colored-progress";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { MiniSparkline } from "@/components/ui/mini-chart";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { formatPercent, formatFrequency, formatTemperature, getStatusColor } from "@/lib/format";
-import { modernChartTheme, getChartConfig, getStatusGradient } from "@/lib/chart-theme";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  formatPercent,
+  formatFrequency,
+  formatTemperature,
+  getStatusColor,
+} from "@/lib/format";
+import {
+  modernChartTheme,
+  getChartConfig,
+  getStatusGradient,
+} from "@/lib/chart-theme";
 import { ModernTooltip } from "@/components/ui/modern-tooltip";
 import { Cpu, Thermometer, Zap } from "lucide-react";
 import { useMonitoringStore } from "@/store/monitoring-store";
+import { useAlertThresholds } from "@/hooks/use-alert-thresholds";
 
 export default function CpuMonitor() {
   // 使用Zustand store获取CPU数据
-  const cpuData = useMonitoringStore(state => state.cpuData);
-  const loading = useMonitoringStore(state => state.loading.cpu);
-  const error = useMonitoringStore(state => state.errors.cpu);
-  
+  const cpuData = useMonitoringStore((state) => state.cpuData);
+  const loading = useMonitoringStore((state) => state.loading.cpu);
+  const error = useMonitoringStore((state) => state.errors.cpu);
+
+  // 获取动态告警阈值
+  const { getThresholds } = useAlertThresholds();
+  const cpuThresholds = getThresholds("cpu");
+
   // 移除了个别的fetch调用，现在使用统一的数据获取机制
 
   if (loading) {
@@ -66,22 +88,27 @@ export default function CpuMonitor() {
     );
   }
 
-  const usageColor = getStatusColor(cpuData.usage, { warning: 70, danger: 90 });
-  const tempColor = cpuData.temperature 
+  const usageColor = getStatusColor(cpuData.usage, cpuThresholds);
+  const tempColor = cpuData.temperature
     ? getStatusColor(cpuData.temperature, { warning: 70, danger: 85 })
     : "text-gray-500";
 
   // 格式化历史数据用于图表
   const chartData = cpuData.history.map((item, index) => ({
-    time: new Date(item.timestamp).toLocaleTimeString("zh-CN", { 
-      hour: "2-digit", 
+    time: new Date(item.timestamp).toLocaleTimeString("zh-CN", {
+      hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit"
+      second: "2-digit",
     }),
     usage: Math.round(item.usage * 10) / 10,
   }));
 
-  const usageStatus = cpuData.usage >= 80 ? 'danger' : cpuData.usage >= 60 ? 'warning' : 'good';
+  const usageStatus =
+    cpuData.usage >= cpuThresholds.danger
+      ? "danger"
+      : cpuData.usage >= cpuThresholds.warning
+      ? "warning"
+      : "good";
 
   return (
     <Card className="monitor-card w-full">
@@ -96,23 +123,37 @@ export default function CpuMonitor() {
                 CPU 监控
               </span>
               <div className="flex items-center gap-2 mt-1">
-                <AnimatedNumber 
-                  value={cpuData.usage} 
-                  suffix="%" 
+                <AnimatedNumber
+                  value={cpuData.usage}
+                  suffix="%"
                   className="text-lg font-bold"
                   decimals={1}
                 />
                 <div className="w-16 h-6">
-                  <MiniSparkline 
-                    data={cpuData.history.slice(-10).map(h => h.usage)}
-                    color={usageStatus === 'good' ? '#22c55e' : usageStatus === 'warning' ? '#f59e0b' : '#ef4444'}
+                  <MiniSparkline
+                    data={cpuData.history.slice(-10).map((h) => h.usage)}
+                    color={
+                      usageStatus === "good"
+                        ? "#22c55e"
+                        : usageStatus === "warning"
+                        ? "#f59e0b"
+                        : "#ef4444"
+                    }
                     height={24}
                   />
                 </div>
               </div>
             </div>
           </div>
-          <div className={`status-indicator status-${usageStatus} w-3 h-3 rounded-full bg-${usageStatus === 'good' ? 'green' : usageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
+          <div
+            className={`status-indicator status-${usageStatus} w-3 h-3 rounded-full bg-${
+              usageStatus === "good"
+                ? "green"
+                : usageStatus === "warning"
+                ? "yellow"
+                : "red"
+            }-500`}
+          ></div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -125,8 +166,8 @@ export default function CpuMonitor() {
                 {formatPercent(cpuData.usage)}
               </Badge>
             </div>
-            <ColoredProgress 
-              value={cpuData.usage} 
+            <ColoredProgress
+              value={cpuData.usage}
               size="md"
               showAnimation={true}
             />
@@ -138,9 +179,9 @@ export default function CpuMonitor() {
               <span className="text-sm font-medium">频率</span>
             </div>
             <div className="text-lg font-semibold">
-              <AnimatedNumber 
-                value={cpuData.frequency} 
-                suffix=" MHz" 
+              <AnimatedNumber
+                value={cpuData.frequency}
+                suffix=" MHz"
                 decimals={1}
               />
             </div>
@@ -153,9 +194,9 @@ export default function CpuMonitor() {
                 <span className="text-sm font-medium">温度</span>
               </div>
               <div className={`text-lg font-semibold ${tempColor}`}>
-                <AnimatedNumber 
-                  value={cpuData.temperature} 
-                  suffix="°C" 
+                <AnimatedNumber
+                  value={cpuData.temperature}
+                  suffix="°C"
                   decimals={1}
                 />
               </div>
@@ -166,11 +207,15 @@ export default function CpuMonitor() {
         {/* CPU 详细信息 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">处理器型号</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              处理器型号
+            </span>
             <div className="font-medium">{cpuData.model}</div>
           </div>
           <div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">核心数</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              核心数
+            </span>
             <div className="font-medium">{cpuData.cores} 核心</div>
           </div>
         </div>
@@ -183,76 +228,95 @@ export default function CpuMonitor() {
           </h4>
           <div className="h-64 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <LineChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              >
                 <defs>
                   <linearGradient id="cpuGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.05} />
+                    <stop
+                      offset="100%"
+                      stopColor="#6366f1"
+                      stopOpacity={0.05}
+                    />
                   </linearGradient>
-                  <linearGradient id="cpuLineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <linearGradient
+                    id="cpuLineGradient"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="0"
+                  >
                     <stop offset="0%" stopColor="#6366f1" />
                     <stop offset="100%" stopColor="#8b5cf6" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid 
-                  strokeDasharray="3 3" 
-                  stroke="currentColor" 
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="currentColor"
                   opacity={0.1}
                   vertical={false}
                 />
-                <XAxis 
-                  dataKey="time" 
+                <XAxis
+                  dataKey="time"
                   tick={{ fontSize: 11, fontWeight: 500 }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                   className="text-gray-600 dark:text-gray-400"
                 />
-                <YAxis 
+                <YAxis
                   domain={[0, 100]}
                   tick={{ fontSize: 11, fontWeight: 500 }}
                   tickLine={false}
                   axisLine={false}
                   width={40}
-                  label={{ 
-                    value: '使用率 (%)', 
-                    angle: -90, 
-                    position: 'insideLeft',
-                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
+                  label={{
+                    value: "使用率 (%)",
+                    angle: -90,
+                    position: "insideLeft",
+                    style: {
+                      textAnchor: "middle",
+                      fontSize: 11,
+                      fontWeight: 500,
+                    },
                   }}
                   className="text-gray-600 dark:text-gray-400"
                 />
-                <Tooltip 
-                  content={<ModernTooltip 
-                    formatter={(value: number) => [`${value}%`, 'CPU 使用率']}
-                    labelFormatter={(label) => `时间: ${label}`}
-                  />}
-                  cursor={{ 
-                    stroke: '#6366f1', 
-                    strokeWidth: 1, 
-                    strokeDasharray: '4 4',
-                    opacity: 0.5
+                <Tooltip
+                  content={
+                    <ModernTooltip
+                      formatter={(value: number) => [`${value}%`, "CPU 使用率"]}
+                      labelFormatter={(label) => `时间: ${label}`}
+                    />
+                  }
+                  cursor={{
+                    stroke: "#6366f1",
+                    strokeWidth: 1,
+                    strokeDasharray: "4 4",
+                    opacity: 0.5,
                   }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="usage" 
+                <Line
+                  type="monotone"
+                  dataKey="usage"
                   stroke="url(#cpuLineGradient)"
                   strokeWidth={3}
                   fill="url(#cpuGradient)"
-                  dot={{ 
-                    fill: '#6366f1', 
-                    strokeWidth: 2, 
+                  dot={{
+                    fill: "#6366f1",
+                    strokeWidth: 2,
                     r: 4,
-                    stroke: '#ffffff',
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                    stroke: "#ffffff",
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
                   }}
-                  activeDot={{ 
-                    r: 6, 
-                    stroke: '#6366f1', 
+                  activeDot={{
+                    r: 6,
+                    stroke: "#6366f1",
                     strokeWidth: 3,
-                    fill: '#ffffff',
-                    filter: 'drop-shadow(0 4px 8px rgba(99,102,241,0.3))'
+                    fill: "#ffffff",
+                    filter: "drop-shadow(0 4px 8px rgba(99,102,241,0.3))",
                   }}
                   connectNulls
                 />

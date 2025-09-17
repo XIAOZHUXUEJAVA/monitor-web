@@ -4,6 +4,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { SystemStatus } from "@/store/app-store";
+import { useAlertStatistics } from "@/hooks/use-alert-statistics";
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,12 +28,7 @@ interface SidebarProps {
   onCollapsedChange?: (collapsed: boolean) => void;
   activeSection?: string;
   onSectionChange?: (section: string) => void;
-  systemStatus?: {
-    cpu: number;
-    memory: number;
-    disk: number;
-    network: boolean;
-  };
+  systemStatus?: SystemStatus;
 }
 
 const navigation = [
@@ -101,7 +98,32 @@ export function Sidebar({
 }: SidebarProps) {
   const isExpanded = !collapsed;
 
-  const getStatusColor = (value: number) => {
+  // 获取告警统计数据
+  const { statistics: alertStats } = useAlertStatistics();
+
+  // 根据状态级别获取颜色
+  const getStatusColorByLevel = (level: "normal" | "warning" | "critical") => {
+    switch (level) {
+      case "critical":
+        return "bg-red-500";
+      case "warning":
+        return "bg-yellow-500";
+      case "normal":
+      default:
+        return "bg-green-500";
+    }
+  };
+
+  const getStatusColor = (
+    value: number,
+    level?: "normal" | "warning" | "critical"
+  ) => {
+    // 如果有级别信息，优先使用级别
+    if (level) {
+      return getStatusColorByLevel(level);
+    }
+
+    // 兜底逻辑：使用原有的硬编码阈值
     if (value >= 90) return "bg-red-500";
     if (value >= 75) return "bg-yellow-500";
     if (value >= 50) return "bg-blue-500";
@@ -196,7 +218,10 @@ export function Sidebar({
                   <div
                     className={cn(
                       "w-2 h-2 rounded-full transition-all duration-300",
-                      getStatusColor(systemStatus.cpu)
+                      getStatusColor(
+                        systemStatus.cpu,
+                        (systemStatus as any).cpuLevel
+                      )
                     )}
                   />
                   <span className="text-xs font-medium">
@@ -212,7 +237,10 @@ export function Sidebar({
                   <div
                     className={cn(
                       "w-2 h-2 rounded-full transition-all duration-300",
-                      getStatusColor(systemStatus.memory)
+                      getStatusColor(
+                        systemStatus.memory,
+                        (systemStatus as any).memoryLevel
+                      )
                     )}
                   />
                   <span className="text-xs font-medium">
@@ -228,7 +256,10 @@ export function Sidebar({
                   <div
                     className={cn(
                       "w-2 h-2 rounded-full transition-all duration-300",
-                      getStatusColor(systemStatus.disk)
+                      getStatusColor(
+                        systemStatus.disk,
+                        (systemStatus as any).diskLevel
+                      )
                     )}
                   />
                   <span className="text-xs font-medium">
@@ -261,19 +292,28 @@ export function Sidebar({
               <div
                 className={cn(
                   "w-3 h-3 rounded-full transition-all duration-300 hover:scale-110",
-                  getStatusColor(systemStatus.cpu)
+                  getStatusColor(
+                    systemStatus.cpu,
+                    (systemStatus as any).cpuLevel
+                  )
                 )}
               />
               <div
                 className={cn(
                   "w-3 h-3 rounded-full transition-all duration-300 hover:scale-110",
-                  getStatusColor(systemStatus.memory)
+                  getStatusColor(
+                    systemStatus.memory,
+                    (systemStatus as any).memoryLevel
+                  )
                 )}
               />
               <div
                 className={cn(
                   "w-3 h-3 rounded-full transition-all duration-300 hover:scale-110",
-                  getStatusColor(systemStatus.disk)
+                  getStatusColor(
+                    systemStatus.disk,
+                    (systemStatus as any).diskLevel
+                  )
                 )}
               />
               <div
@@ -347,29 +387,81 @@ export function Sidebar({
             )}
           </div>
           <div className="space-y-1">
-            {tools.map((item) => (
-              <Button
-                key={item.id}
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-3 h-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 ease-out transform hover:scale-[1.02]",
-                  !isExpanded && "justify-center px-0"
-                )}
-                onClick={() => onSectionChange?.(item.id)}
-              >
-                <item.icon
+            {tools.map((item) => {
+              const isActive = activeSection === item.id;
+
+              // 为告警中心添加告警数量徽章
+              const renderAlertBadges = () => {
+                if (item.id !== "alerts" || !alertStats || !isExpanded)
+                  return null;
+
+                const { critical_alerts, warning_alerts } = alertStats;
+                const hasAlerts = critical_alerts > 0 || warning_alerts > 0;
+
+                if (!hasAlerts) return null;
+
+                return (
+                  <div className="flex items-center gap-1">
+                    {critical_alerts > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white"
+                      >
+                        {critical_alerts}
+                      </Badge>
+                    )}
+                    {warning_alerts > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs px-1.5 py-0.5 min-w-[20px] h-5 flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-white"
+                      >
+                        {warning_alerts}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              };
+
+              return (
+                <Button
+                  key={item.id}
+                  variant={isActive ? "default" : "ghost"}
                   className={cn(
-                    "h-5 w-5 transition-all duration-300",
-                    !isExpanded && "h-6 w-6"
+                    "w-full justify-start gap-3 h-10 transition-all duration-300 ease-out transform hover:scale-[1.02]",
+                    isActive &&
+                      "bg-blue-500 hover:bg-blue-600 text-white shadow-lg",
+                    !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800",
+                    !isExpanded && "justify-center px-0"
                   )}
-                />
-                {isExpanded && (
-                  <span className="flex-1 text-left transition-all duration-300 ease-out">
-                    {item.name}
-                  </span>
-                )}
-              </Button>
-            ))}
+                  onClick={() => onSectionChange?.(item.id)}
+                >
+                  <item.icon
+                    className={cn(
+                      "h-5 w-5 transition-all duration-300",
+                      !isExpanded && "h-6 w-6"
+                    )}
+                  />
+                  {isExpanded && (
+                    <>
+                      <span className="flex-1 text-left transition-all duration-300 ease-out">
+                        {item.name}
+                      </span>
+                      {renderAlertBadges()}
+                    </>
+                  )}
+
+                  {/* 折叠状态下的告警指示器 */}
+                  {!isExpanded && item.id === "alerts" && alertStats && (
+                    <div className="absolute -top-1 -right-1">
+                      {(alertStats.critical_alerts > 0 ||
+                        alertStats.warning_alerts > 0) && (
+                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                      )}
+                    </div>
+                  )}
+                </Button>
+              );
+            })}
           </div>
         </div>
       </nav>

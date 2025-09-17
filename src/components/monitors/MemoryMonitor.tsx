@@ -20,10 +20,15 @@ import {
   CartesianGrid,
 } from "recharts";
 import { formatBytes, formatPercent, getStatusColor } from "@/lib/format";
-import { modernChartTheme, getChartConfig, getStatusGradient } from "@/lib/chart-theme";
+import {
+  modernChartTheme,
+  getChartConfig,
+  getStatusGradient,
+} from "@/lib/chart-theme";
 import { ModernTooltip } from "@/components/ui/modern-tooltip";
 import { MemoryStick, HardDrive } from "lucide-react";
 import { useMonitoringStore } from "@/store/monitoring-store";
+import { useAlertThresholds } from "@/hooks/use-alert-thresholds";
 
 const COLORS = {
   used: "#ef4444",
@@ -33,10 +38,14 @@ const COLORS = {
 
 export default function MemoryMonitor() {
   // 使用Zustand store获取内存数据
-  const memoryData = useMonitoringStore(state => state.memoryData);
-  const loading = useMonitoringStore(state => state.loading.memory);
-  const error = useMonitoringStore(state => state.errors.memory);
-  
+  const memoryData = useMonitoringStore((state) => state.memoryData);
+  const loading = useMonitoringStore((state) => state.loading.memory);
+  const error = useMonitoringStore((state) => state.errors.memory);
+
+  // 获取动态告警阈值
+  const { getThresholds } = useAlertThresholds();
+  const memoryThresholds = getThresholds("memory");
+
   // 移除了个别的fetch调用，现在使用统一的数据获取机制
 
   if (loading) {
@@ -83,10 +92,7 @@ export default function MemoryMonitor() {
     );
   }
 
-  const usageColor = getStatusColor(memoryData.usage_percent, {
-    warning: 75,
-    danger: 90,
-  });
+  const usageColor = getStatusColor(memoryData.usage_percent, memoryThresholds);
 
   // 饼图数据
   const pieData = [
@@ -105,7 +111,12 @@ export default function MemoryMonitor() {
     used: Math.round(item.used * 100) / 100,
   }));
 
-  const usageStatus = memoryData.usage_percent >= 90 ? 'danger' : memoryData.usage_percent >= 75 ? 'warning' : 'good';
+  const usageStatus =
+    memoryData.usage_percent >= memoryThresholds.danger
+      ? "danger"
+      : memoryData.usage_percent >= memoryThresholds.warning
+      ? "warning"
+      : "good";
 
   return (
     <Card className="monitor-card w-full">
@@ -120,23 +131,39 @@ export default function MemoryMonitor() {
                 内存监控
               </span>
               <div className="flex items-center gap-2 mt-1">
-                <AnimatedNumber 
-                  value={memoryData.usage_percent} 
-                  suffix="%" 
+                <AnimatedNumber
+                  value={memoryData.usage_percent}
+                  suffix="%"
                   className="text-lg font-bold"
                   decimals={1}
                 />
                 <div className="w-16 h-6">
-                  <MiniSparkline 
-                    data={memoryData.history.slice(-10).map(h => h.usage_percent)}
-                    color={usageStatus === 'good' ? '#22c55e' : usageStatus === 'warning' ? '#f59e0b' : '#ef4444'}
+                  <MiniSparkline
+                    data={memoryData.history
+                      .slice(-10)
+                      .map((h) => h.usage_percent)}
+                    color={
+                      usageStatus === "good"
+                        ? "#22c55e"
+                        : usageStatus === "warning"
+                        ? "#f59e0b"
+                        : "#ef4444"
+                    }
                     height={24}
                   />
                 </div>
               </div>
             </div>
           </div>
-          <div className={`status-indicator status-${usageStatus} w-3 h-3 rounded-full bg-${usageStatus === 'good' ? 'green' : usageStatus === 'warning' ? 'yellow' : 'red'}-500`}></div>
+          <div
+            className={`status-indicator status-${usageStatus} w-3 h-3 rounded-full bg-${
+              usageStatus === "good"
+                ? "green"
+                : usageStatus === "warning"
+                ? "yellow"
+                : "red"
+            }-500`}
+          ></div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -148,8 +175,8 @@ export default function MemoryMonitor() {
               {formatPercent(memoryData.usage_percent)}
             </Badge>
           </div>
-          <ColoredProgress 
-            value={memoryData.usage_percent} 
+          <ColoredProgress
+            value={memoryData.usage_percent}
             size="lg"
             showAnimation={true}
           />
@@ -175,13 +202,25 @@ export default function MemoryMonitor() {
                 <PieChart>
                   <defs>
                     {/* 增强渐变效果 */}
-                    <linearGradient id="usedMemoryGradient" x1="0" y1="0" x2="1" y2="1">
+                    <linearGradient
+                      id="usedMemoryGradient"
+                      x1="0"
+                      y1="0"
+                      x2="1"
+                      y2="1"
+                    >
                       <stop offset="0%" stopColor="#ec4899" />
                       <stop offset="30%" stopColor="#f43f5e" />
                       <stop offset="70%" stopColor="#ef4444" />
                       <stop offset="100%" stopColor="#dc2626" />
                     </linearGradient>
-                    <linearGradient id="freeMemoryGradient" x1="0" y1="0" x2="1" y2="1">
+                    <linearGradient
+                      id="freeMemoryGradient"
+                      x1="0"
+                      y1="0"
+                      x2="1"
+                      y2="1"
+                    >
                       <stop offset="0%" stopColor="#06b6d4" />
                       <stop offset="30%" stopColor="#0891b2" />
                       <stop offset="70%" stopColor="#10b981" />
@@ -189,11 +228,21 @@ export default function MemoryMonitor() {
                     </linearGradient>
                     {/* 中央圆形阴影 */}
                     <filter id="innerShadow">
-                      <feDropShadow dx="0" dy="2" stdDeviation="4" floodOpacity="0.1"/>
+                      <feDropShadow
+                        dx="0"
+                        dy="2"
+                        stdDeviation="4"
+                        floodOpacity="0.1"
+                      />
                     </filter>
                     {/* 外部阴影 */}
                     <filter id="outerShadow">
-                      <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.15"/>
+                      <feDropShadow
+                        dx="0"
+                        dy="4"
+                        stdDeviation="8"
+                        floodOpacity="0.15"
+                      />
                     </filter>
                   </defs>
                   <Pie
@@ -207,37 +256,39 @@ export default function MemoryMonitor() {
                     startAngle={90}
                     endAngle={450}
                   >
-                    <Cell 
-                      fill="url(#usedMemoryGradient)" 
-                      stroke="#ffffff" 
+                    <Cell
+                      fill="url(#usedMemoryGradient)"
+                      stroke="#ffffff"
                       strokeWidth={3}
                       filter="url(#outerShadow)"
                     />
-                    <Cell 
-                      fill="url(#freeMemoryGradient)" 
-                      stroke="#ffffff" 
+                    <Cell
+                      fill="url(#freeMemoryGradient)"
+                      stroke="#ffffff"
                       strokeWidth={3}
                       filter="url(#outerShadow)"
                     />
                   </Pie>
                   <Tooltip
-                    content={<ModernTooltip 
-                      formatter={(value: number, name: string) => [
-                        formatBytes(value * 1024 * 1024 * 1024),
-                        name === '已使用' ? '已使用内存' : '空闲内存'
-                      ]}
-                    />}
+                    content={
+                      <ModernTooltip
+                        formatter={(value: number, name: string) => [
+                          formatBytes(value * 1024 * 1024 * 1024),
+                          name === "已使用" ? "已使用内存" : "空闲内存",
+                        ]}
+                      />
+                    }
                   />
                 </PieChart>
               </ResponsiveContainer>
-              
+
               {/* 中央数据显示 */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    <AnimatedNumber 
-                      value={memoryData.usage_percent} 
-                      suffix="%" 
+                    <AnimatedNumber
+                      value={memoryData.usage_percent}
+                      suffix="%"
                       decimals={1}
                     />
                   </div>
@@ -245,20 +296,22 @@ export default function MemoryMonitor() {
                     已使用
                   </div>
                   <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    <AnimatedNumber 
-                      value={memoryData.used} 
-                      suffix=" GB" 
+                    <AnimatedNumber
+                      value={memoryData.used}
+                      suffix=" GB"
                       decimals={1}
-                    /> / <AnimatedNumber 
-                      value={memoryData.total} 
-                      suffix=" GB" 
+                    />{" "}
+                    /{" "}
+                    <AnimatedNumber
+                      value={memoryData.total}
+                      suffix=" GB"
                       decimals={1}
                     />
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {/* 增强图例 */}
             <div className="flex justify-center gap-8">
               <div className="flex items-center gap-3">
@@ -267,11 +320,13 @@ export default function MemoryMonitor() {
                   <div className="absolute inset-0 w-4 h-4 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-red-600 animate-ping opacity-20"></div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">已使用</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    已使用
+                  </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <AnimatedNumber 
-                      value={memoryData.used} 
-                      suffix=" GB" 
+                    <AnimatedNumber
+                      value={memoryData.used}
+                      suffix=" GB"
                       decimals={1}
                     />
                   </div>
@@ -283,11 +338,13 @@ export default function MemoryMonitor() {
                   <div className="absolute inset-0 w-4 h-4 rounded-full bg-gradient-to-br from-cyan-500 via-teal-500 to-green-600 animate-ping opacity-20"></div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">空闲</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    空闲
+                  </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <AnimatedNumber 
-                      value={memoryData.free} 
-                      suffix=" GB" 
+                    <AnimatedNumber
+                      value={memoryData.free}
+                      suffix=" GB"
                       decimals={1}
                     />
                   </div>
@@ -305,9 +362,9 @@ export default function MemoryMonitor() {
                   总内存
                 </span>
                 <span className="font-medium">
-                  <AnimatedNumber 
-                    value={memoryData.total} 
-                    suffix=" GB" 
+                  <AnimatedNumber
+                    value={memoryData.total}
+                    suffix=" GB"
                     decimals={1}
                   />
                 </span>
@@ -317,9 +374,9 @@ export default function MemoryMonitor() {
                   已使用
                 </span>
                 <span className="font-medium text-red-600">
-                  <AnimatedNumber 
-                    value={memoryData.used} 
-                    suffix=" GB" 
+                  <AnimatedNumber
+                    value={memoryData.used}
+                    suffix=" GB"
                     decimals={1}
                   />
                 </span>
@@ -329,9 +386,9 @@ export default function MemoryMonitor() {
                   可用
                 </span>
                 <span className="font-medium text-green-600">
-                  <AnimatedNumber 
-                    value={memoryData.available} 
-                    suffix=" GB" 
+                  <AnimatedNumber
+                    value={memoryData.available}
+                    suffix=" GB"
                     decimals={1}
                   />
                 </span>
@@ -379,13 +436,32 @@ export default function MemoryMonitor() {
           </h4>
           <div className="h-64 p-4 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <LineChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              >
                 <defs>
-                  <linearGradient id="memoryGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient
+                    id="memoryGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
                     <stop offset="0%" stopColor="#ec4899" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#ec4899" stopOpacity={0.05} />
+                    <stop
+                      offset="100%"
+                      stopColor="#ec4899"
+                      stopOpacity={0.05}
+                    />
                   </linearGradient>
-                  <linearGradient id="memoryLineGradient" x1="0" y1="0" x2="1" y2="0">
+                  <linearGradient
+                    id="memoryLineGradient"
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="0"
+                  >
                     <stop offset="0%" stopColor="#ec4899" />
                     <stop offset="100%" stopColor="#f59e0b" />
                   </linearGradient>
@@ -414,28 +490,34 @@ export default function MemoryMonitor() {
                     value: "使用率 (%)",
                     angle: -90,
                     position: "insideLeft",
-                    style: { textAnchor: 'middle', fontSize: 11, fontWeight: 500 }
+                    style: {
+                      textAnchor: "middle",
+                      fontSize: 11,
+                      fontWeight: 500,
+                    },
                   }}
                   className="text-gray-600 dark:text-gray-400"
                 />
                 <Tooltip
-                  content={<ModernTooltip 
-                    formatter={(value: number, name: string) => {
-                      if (name === "usage_percent") {
-                        return [`${value}%`, "内存使用率"];
-                      }
-                      return [
-                        formatBytes(value * 1024 * 1024 * 1024),
-                        "已使用内存",
-                      ];
-                    }}
-                    labelFormatter={(label) => `时间: ${label}`}
-                  />}
+                  content={
+                    <ModernTooltip
+                      formatter={(value: number, name: string) => {
+                        if (name === "usage_percent") {
+                          return [`${value}%`, "内存使用率"];
+                        }
+                        return [
+                          formatBytes(value * 1024 * 1024 * 1024),
+                          "已使用内存",
+                        ];
+                      }}
+                      labelFormatter={(label) => `时间: ${label}`}
+                    />
+                  }
                   cursor={{
-                    stroke: '#ec4899',
+                    stroke: "#ec4899",
                     strokeWidth: 1,
-                    strokeDasharray: '4 4',
-                    opacity: 0.5
+                    strokeDasharray: "4 4",
+                    opacity: 0.5,
                   }}
                 />
                 <Line
@@ -445,18 +527,18 @@ export default function MemoryMonitor() {
                   strokeWidth={3}
                   fill="url(#memoryGradient)"
                   dot={{
-                    fill: '#ec4899',
+                    fill: "#ec4899",
                     strokeWidth: 2,
                     r: 4,
-                    stroke: '#ffffff',
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                    stroke: "#ffffff",
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
                   }}
                   activeDot={{
                     r: 6,
-                    stroke: '#ec4899',
+                    stroke: "#ec4899",
                     strokeWidth: 3,
-                    fill: '#ffffff',
-                    filter: 'drop-shadow(0 4px 8px rgba(236,72,153,0.3))'
+                    fill: "#ffffff",
+                    filter: "drop-shadow(0 4px 8px rgba(236,72,153,0.3))",
                   }}
                   connectNulls
                 />
