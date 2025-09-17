@@ -42,12 +42,6 @@ const navigation = [
     badge: null,
   },
   {
-    id: "hosts",
-    name: "主机管理",
-    icon: Server,
-    badge: null,
-  },
-  {
     id: "cpu",
     name: "CPU 监控",
     icon: Cpu,
@@ -116,7 +110,7 @@ export function Sidebar({
 
   const getStatusBadge = (sectionId: string) => {
     if (!systemStatus) return null;
-    
+
     switch (sectionId) {
       case "cpu":
         if (systemStatus.cpu >= 80) return "warning";
@@ -143,22 +137,28 @@ export function Sidebar({
       )}
     >
       {/* Header */}
-      <div className={cn(
-        "flex items-center border-b border-gray-200/50 dark:border-gray-700/50 p-4",
-        isExpanded ? "justify-between" : "justify-center"
-      )}>
+      <div
+        className={cn(
+          "flex items-center border-b border-gray-200/50 dark:border-gray-700/50 p-4",
+          isExpanded ? "justify-between" : "justify-center"
+        )}
+      >
         {isExpanded && (
           <div className="flex items-center gap-3 transition-all duration-500 ease-out transform">
             <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg">
               <BarChart3 className="h-5 w-5 text-white" />
             </div>
             <div className="transition-all duration-500 ease-out transform">
-              <h2 className="font-semibold text-gray-900 dark:text-white">监控中心</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">实时系统监控</p>
+              <h2 className="font-semibold text-gray-900 dark:text-white">
+                监控中心
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                实时系统监控
+              </p>
             </div>
           </div>
         )}
-        
+
         <Button
           variant="ghost"
           size="sm"
@@ -178,47 +178,110 @@ export function Sidebar({
       {/* System Status Overview */}
       {systemStatus && (
         <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <div className={cn("transition-all duration-500 ease-out transform", !isExpanded && "opacity-0 scale-95")}>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">系统状态</h3>
+          <div
+            className={cn(
+              "transition-all duration-500 ease-out transform",
+              !isExpanded && "opacity-0 scale-95"
+            )}
+          >
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              系统状态
+            </h3>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-400">CPU</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  CPU
+                </span>
                 <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full transition-all duration-300", getStatusColor(systemStatus.cpu))} />
-                  <span className="text-xs font-medium">{systemStatus.cpu.toFixed(1)}%</span>
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-all duration-300",
+                      getStatusColor(systemStatus.cpu)
+                    )}
+                  />
+                  <span className="text-xs font-medium">
+                    {systemStatus.cpu.toFixed(1)}%
+                  </span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-400">内存</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  内存
+                </span>
                 <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full transition-all duration-300", getStatusColor(systemStatus.memory))} />
-                  <span className="text-xs font-medium">{systemStatus.memory.toFixed(1)}%</span>
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-all duration-300",
+                      getStatusColor(systemStatus.memory)
+                    )}
+                  />
+                  <span className="text-xs font-medium">
+                    {systemStatus.memory.toFixed(1)}%
+                  </span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-400">磁盘</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  磁盘
+                </span>
                 <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full transition-all duration-300", getStatusColor(systemStatus.disk))} />
-                  <span className="text-xs font-medium">{systemStatus.disk.toFixed(1)}%</span>
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-all duration-300",
+                      getStatusColor(systemStatus.disk)
+                    )}
+                  />
+                  <span className="text-xs font-medium">
+                    {systemStatus.disk.toFixed(1)}%
+                  </span>
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-400">网络</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  网络
+                </span>
                 <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full transition-all duration-300", systemStatus.network ? "bg-green-500" : "bg-red-500")} />
-                  <span className="text-xs font-medium">{systemStatus.network ? "正常" : "异常"}</span>
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-all duration-300",
+                      systemStatus.network ? "bg-green-500" : "bg-red-500"
+                    )}
+                  />
+                  <span className="text-xs font-medium">
+                    {systemStatus.network ? "正常" : "异常"}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
-          
+
           {/* Collapsed status indicators */}
           {!isExpanded && (
             <div className="flex flex-col items-center gap-1 transition-all duration-500 ease-out transform animate-in slide-in-from-top-2">
-              <div className={cn("w-3 h-3 rounded-full transition-all duration-300 hover:scale-110", getStatusColor(systemStatus.cpu))} />
-              <div className={cn("w-3 h-3 rounded-full transition-all duration-300 hover:scale-110", getStatusColor(systemStatus.memory))} />
-              <div className={cn("w-3 h-3 rounded-full transition-all duration-300 hover:scale-110", getStatusColor(systemStatus.disk))} />
-              <div className={cn("w-3 h-3 rounded-full transition-all duration-300 hover:scale-110", systemStatus.network ? "bg-green-500" : "bg-red-500")} />
+              <div
+                className={cn(
+                  "w-3 h-3 rounded-full transition-all duration-300 hover:scale-110",
+                  getStatusColor(systemStatus.cpu)
+                )}
+              />
+              <div
+                className={cn(
+                  "w-3 h-3 rounded-full transition-all duration-300 hover:scale-110",
+                  getStatusColor(systemStatus.memory)
+                )}
+              />
+              <div
+                className={cn(
+                  "w-3 h-3 rounded-full transition-all duration-300 hover:scale-110",
+                  getStatusColor(systemStatus.disk)
+                )}
+              />
+              <div
+                className={cn(
+                  "w-3 h-3 rounded-full transition-all duration-300 hover:scale-110",
+                  systemStatus.network ? "bg-green-500" : "bg-red-500"
+                )}
+              />
             </div>
           )}
         </div>
@@ -230,14 +293,15 @@ export function Sidebar({
           {navigation.map((item) => {
             const isActive = activeSection === item.id;
             const statusBadge = getStatusBadge(item.id);
-            
+
             return (
               <Button
                 key={item.id}
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
                   "w-full justify-start gap-3 h-10 transition-all duration-300 ease-out transform hover:scale-[1.02]",
-                  isActive && "bg-blue-500 hover:bg-blue-600 text-white shadow-lg",
+                  isActive &&
+                    "bg-blue-500 hover:bg-blue-600 text-white shadow-lg",
                   !isActive && "hover:bg-gray-100 dark:hover:bg-gray-800",
                   !isExpanded && "justify-center px-0"
                 )}
@@ -245,13 +309,22 @@ export function Sidebar({
                   onSectionChange?.(item.id);
                 }}
               >
-                <item.icon className={cn("h-5 w-5 transition-all duration-300", !isExpanded && "h-6 w-6")} />
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 transition-all duration-300",
+                    !isExpanded && "h-6 w-6"
+                  )}
+                />
                 {isExpanded && (
                   <>
-                    <span className="flex-1 text-left transition-all duration-300 ease-out">{item.name}</span>
+                    <span className="flex-1 text-left transition-all duration-300 ease-out">
+                      {item.name}
+                    </span>
                     {statusBadge && (
                       <Badge
-                        variant={statusBadge === "danger" ? "destructive" : "secondary"}
+                        variant={
+                          statusBadge === "danger" ? "destructive" : "secondary"
+                        }
                         className="text-xs transition-all duration-300 ease-out"
                       >
                         !
@@ -268,7 +341,9 @@ export function Sidebar({
         <div className="mt-8">
           <div className="mb-3 transition-all duration-500 ease-out transform">
             {isExpanded && (
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-all duration-300 ease-out">工具</h3>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-all duration-300 ease-out">
+                工具
+              </h3>
             )}
           </div>
           <div className="space-y-1">
@@ -282,8 +357,17 @@ export function Sidebar({
                 )}
                 onClick={() => onSectionChange?.(item.id)}
               >
-                <item.icon className={cn("h-5 w-5 transition-all duration-300", !isExpanded && "h-6 w-6")} />
-                {isExpanded && <span className="flex-1 text-left transition-all duration-300 ease-out">{item.name}</span>}
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 transition-all duration-300",
+                    !isExpanded && "h-6 w-6"
+                  )}
+                />
+                {isExpanded && (
+                  <span className="flex-1 text-left transition-all duration-300 ease-out">
+                    {item.name}
+                  </span>
+                )}
               </Button>
             ))}
           </div>

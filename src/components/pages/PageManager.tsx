@@ -1,7 +1,6 @@
 "use client";
 
 import { OverviewPage } from "./OverviewPage";
-import { HostsPage } from "./HostsPage";
 import { CpuPage } from "./CpuPage";
 import { MemoryPage } from "./MemoryPage";
 import { DiskPage } from "./DiskPage";
@@ -21,8 +20,6 @@ export function PageManager({ activeSection, refreshKey }: PageManagerProps) {
     switch (activeSection) {
       case "overview":
         return <OverviewPage refreshKey={refreshKey} />;
-      case "hosts":
-        return <HostsPage refreshKey={refreshKey} />;
       case "cpu":
         return <CpuPage refreshKey={refreshKey} />;
       case "memory":
@@ -44,9 +41,5 @@ export function PageManager({ activeSection, refreshKey }: PageManagerProps) {
     }
   };
 
-  return (
-    <div className="animate-fade-in">
-      {renderPage()}
-    </div>
-  );
+  return <div className="animate-fade-in">{renderPage()}</div>;
 }

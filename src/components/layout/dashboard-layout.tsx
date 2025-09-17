@@ -22,23 +22,19 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
     setSidebarCollapsed,
     setActiveSection,
   } = useAppState();
-  
-  const {
-    refresh,
-    systemStatus,
-  } = useMonitoringData();
+
+  const { refresh, systemStatus } = useMonitoringData();
 
   // 从store获取updateSettings函数
-  const updateSettings = useAppStore(state => state.updateSettings);
-  
+  const updateSettings = useAppStore((state) => state.updateSettings);
+
   // 从store获取refreshKey
-  const refreshKey = useAppStore(state => state.refreshKey);
+  const refreshKey = useAppStore((state) => state.refreshKey);
 
   // 获取页面标题
   const getPageTitle = () => {
     const titles: Record<string, string> = {
       overview: "系统概览",
-      hosts: "主机管理",
       cpu: "CPU 监控",
       memory: "内存监控",
       disk: "磁盘监控",
@@ -77,7 +73,7 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
                 实时监控系统性能和资源使用情况
               </p>
             </div>
-            
+
             <div className="flex items-center gap-4">
               {/* 快速操作按钮 */}
               <Button
@@ -87,19 +83,26 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
                 disabled={isRefreshing}
                 className="flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 dark:border-blue-700"
               >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
                 {isRefreshing ? "刷新中..." : "刷新数据"}
               </Button>
-              
+
               <div className="flex items-center gap-3">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => updateSettings({ ...settings, autoRefresh: !settings.autoRefresh })}
+                  onClick={() =>
+                    updateSettings({
+                      ...settings,
+                      autoRefresh: !settings.autoRefresh,
+                    })
+                  }
                   className={`flex items-center gap-2 px-3 py-1 transition-all duration-200 ${
                     settings.autoRefresh
-                      ? 'bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300'
-                      : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'
+                      ? "bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-300"
+                      : "bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {settings.autoRefresh ? (
@@ -114,26 +117,31 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
                     </>
                   )}
                 </Button>
-                
-                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all duration-200 ${
-                  settings.autoRefresh 
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
-                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${
-                    settings.autoRefresh 
-                      ? 'bg-green-500 animate-pulse' 
-                      : 'bg-gray-400'
-                  }`} />
-                  <span className={`text-sm font-medium ${
+
+                <div
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all duration-200 ${
                     settings.autoRefresh
-                      ? 'text-green-700 dark:text-green-300'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}>
-                    {settings.autoRefresh 
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+                      : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600"
+                  }`}
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      settings.autoRefresh
+                        ? "bg-green-500 animate-pulse"
+                        : "bg-gray-400"
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      settings.autoRefresh
+                        ? "text-green-700 dark:text-green-300"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}
+                  >
+                    {settings.autoRefresh
                       ? `实时监控中 (每${settings.refreshInterval}秒刷新)`
-                      : '手动刷新模式'
-                    }
+                      : "手动刷新模式"}
                   </span>
                 </div>
               </div>
@@ -142,20 +150,14 @@ export function DashboardLayout({ className }: DashboardLayoutProps) {
         </div>
 
         {/* Main Content Area */}
-        <div className={cn(
-          "flex-1 overflow-auto p-6",
-          className
-        )}>
-          <PageManager 
-            activeSection={activeSection} 
-            refreshKey={refreshKey}
-          />
+        <div className={cn("flex-1 overflow-auto p-6", className)}>
+          <PageManager activeSection={activeSection} refreshKey={refreshKey} />
         </div>
       </div>
 
       {/* Mobile Overlay */}
       {!sidebarCollapsed && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarCollapsed(true)}
         />

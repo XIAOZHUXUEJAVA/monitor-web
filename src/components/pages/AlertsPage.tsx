@@ -5,15 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { getAlertRules, AlertRule, formatDuration } from "@/lib/alert-api";
-import { 
-  Bell, 
-  AlertTriangle, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Bell,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle,
   Settings,
   Filter,
   Search,
-  Clock
+  Clock,
 } from "lucide-react";
 
 export function AlertsPage() {
@@ -28,7 +28,7 @@ export function AlertsPage() {
         const rules = await getAlertRules();
         setAlertRules(rules);
       } catch (error) {
-        console.error('Failed to load alert rules:', error);
+        console.error("Failed to load alert rules:", error);
       } finally {
         setLoadingRules(false);
       }
@@ -93,12 +93,14 @@ export function AlertsPage() {
     if (resolved) {
       return <Badge variant="secondary">已解决</Badge>;
     }
-    
+
     switch (type) {
       case "error":
         return <Badge variant="destructive">严重</Badge>;
       case "warning":
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">警告</Badge>;
+        return (
+          <Badge className="bg-yellow-500 hover:bg-yellow-600">警告</Badge>
+        );
       case "info":
         return <Badge variant="outline">信息</Badge>;
       default:
@@ -106,7 +108,7 @@ export function AlertsPage() {
     }
   };
 
-  const unResolvedCount = alerts.filter(alert => !alert.resolved).length;
+  const unResolvedCount = alerts.filter((alert) => !alert.resolved).length;
 
   return (
     <div className="space-y-6">
@@ -115,7 +117,8 @@ export function AlertsPage() {
         <div>
           {/* <h2 className="text-2xl font-bold text-gray-900 dark:text-white">告警中心</h2> */}
           <p className="text-gray-600 dark:text-gray-400">
-            监控系统告警和通知 · 共 {alerts.length} 条告警，{unResolvedCount} 条待处理
+            监控系统告警和通知 · 共 {alerts.length} 条告警，{unResolvedCount}{" "}
+            条待处理
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -140,8 +143,12 @@ export function AlertsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">总告警数</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{alerts.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  总告警数
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {alerts.length}
+                </p>
               </div>
               <Bell className="h-8 w-8 text-gray-400" />
             </div>
@@ -152,9 +159,14 @@ export function AlertsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">严重告警</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  严重告警
+                </p>
                 <p className="text-2xl font-bold text-red-600">
-                  {alerts.filter(a => a.type === "error" && !a.resolved).length}
+                  {
+                    alerts.filter((a) => a.type === "error" && !a.resolved)
+                      .length
+                  }
                 </p>
               </div>
               <AlertCircle className="h-8 w-8 text-red-400" />
@@ -166,9 +178,14 @@ export function AlertsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">警告告警</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  警告告警
+                </p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {alerts.filter(a => a.type === "warning" && !a.resolved).length}
+                  {
+                    alerts.filter((a) => a.type === "warning" && !a.resolved)
+                      .length
+                  }
                 </p>
               </div>
               <AlertTriangle className="h-8 w-8 text-yellow-400" />
@@ -180,9 +197,11 @@ export function AlertsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">已解决</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  已解决
+                </p>
                 <p className="text-2xl font-bold text-green-600">
-                  {alerts.filter(a => a.resolved).length}
+                  {alerts.filter((a) => a.resolved).length}
                 </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-400" />
@@ -205,8 +224,8 @@ export function AlertsPage() {
               <div
                 key={alert.id}
                 className={`p-4 border rounded-lg transition-all duration-200 hover:shadow-md ${
-                  alert.resolved 
-                    ? "bg-gray-50 dark:bg-gray-800/50 opacity-75" 
+                  alert.resolved
+                    ? "bg-gray-50 dark:bg-gray-800/50 opacity-75"
                     : "bg-white dark:bg-gray-800"
                 }`}
               >
@@ -262,39 +281,55 @@ export function AlertsPage() {
         <CardContent>
           {loadingRules ? (
             <div className="text-center py-4">
-              <span className="text-sm text-gray-600 dark:text-gray-400">加载告警规则中...</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                加载告警规则中...
+              </span>
             </div>
           ) : (
             <div className="space-y-4">
               {alertRules.map((rule) => (
-                <div key={rule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div
+                  key={rule.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
                   <div>
                     <h4 className="font-medium">{rule.name}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {rule.metric_type.toUpperCase()}使用率{rule.operator}{rule.threshold}%持续{formatDuration(rule.duration)}时触发
+                      {rule.metric_type.toUpperCase()}使用率{rule.operator}
+                      {rule.threshold}%持续{formatDuration(rule.duration)}时触发
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-500">
-                      {rule.host_id ? `主机特定规则 (ID: ${rule.host_id})` : '全局规则'}
+                      本机告警规则
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={rule.severity === 'critical' ? 'destructive' : 
-                              rule.severity === 'warning' ? 'default' : 'secondary'}
+                    <Badge
+                      variant={
+                        rule.severity === "critical"
+                          ? "destructive"
+                          : rule.severity === "warning"
+                          ? "default"
+                          : "secondary"
+                      }
                     >
-                      {rule.severity === 'critical' ? '严重' : 
-                       rule.severity === 'warning' ? '警告' : '信息'}
+                      {rule.severity === "critical"
+                        ? "严重"
+                        : rule.severity === "warning"
+                        ? "警告"
+                        : "信息"}
                     </Badge>
                     <Badge variant={rule.enabled ? "outline" : "secondary"}>
-                      {rule.enabled ? '启用' : '禁用'}
+                      {rule.enabled ? "启用" : "禁用"}
                     </Badge>
                   </div>
                 </div>
               ))}
-              
+
               {alertRules.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-gray-600 dark:text-gray-400">暂无告警规则</p>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    暂无告警规则
+                  </p>
                 </div>
               )}
             </div>

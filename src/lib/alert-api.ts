@@ -2,14 +2,13 @@
 export interface AlertRule {
   id: number;
   name: string;
-  metric_type: 'cpu' | 'memory' | 'disk' | 'network';
-  operator: '>' | '<' | '>=' | '<=' | '==';
+  metric_type: "cpu" | "memory" | "disk" | "network";
+  operator: ">" | "<" | ">=" | "<=" | "==";
   threshold: number;
   duration: number; // 持续时间（秒）
-  severity: 'info' | 'warning' | 'critical';
+  severity: "info" | "warning" | "critical";
   enabled: boolean;
   description: string;
-  host_id?: number | null; // 主机ID，null表示全局规则
   created_at: string;
   updated_at: string;
 }
@@ -35,13 +34,13 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
     });
 
     console.log(`Response status: ${response.status}`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Response data:', data);
+    console.log("Response data:", data);
     return data;
   } catch (error) {
     console.error(`API call failed for ${endpoint}:`, error);
@@ -50,9 +49,8 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 // 获取所有告警规则
-export async function getAlertRules(hostId?: number): Promise<AlertRule[]> {
-  const url = hostId ? `/api/v1/alert-rules?host_id=${hostId}` : '/api/v1/alert-rules';
-  return apiCall<AlertRule[]>(url);
+export async function getAlertRules(): Promise<AlertRule[]> {
+  return apiCall<AlertRule[]>("/api/v1/alert-rules");
 }
 
 // 更新告警规则阈值
@@ -64,9 +62,9 @@ export async function updateAlertRuleThreshold(
   return apiCall<AlertRule>(
     `/api/v1/alert-rules/${metricType}/${severity}/threshold`,
     {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ threshold }),
     }
@@ -79,36 +77,11 @@ export function getAlertRuleByTypeAndSeverity(
   metricType: string,
   severity: string
 ): AlertRule | undefined {
-  return rules.find(rule => 
-    rule.metric_type === metricType && 
-    rule.severity === severity
+  return rules.find(
+    (rule) => rule.metric_type === metricType && rule.severity === severity
   );
 }
 
-// 为主机创建特定告警规则
-export async function createHostAlertRule(
-  hostId: number,
-  metricType: string,
-  severity: string,
-  threshold: number,
-  duration?: number,
-  enabled?: boolean
-): Promise<AlertRule> {
-  return apiCall<AlertRule>('/api/v1/alert-rules/host', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      host_id: hostId,
-      metric_type: metricType,
-      severity: severity,
-      threshold: threshold,
-      duration: duration,
-      enabled: enabled
-    }),
-  });
-}
 export function formatDuration(seconds: number): string {
   if (seconds < 60) {
     return `${seconds}秒`;
